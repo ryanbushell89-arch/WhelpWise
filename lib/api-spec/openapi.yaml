@@ -1,0 +1,3441 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: WhelpWise Breeder Management Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard statistics
+  - name: dogs
+    description: Dog management
+  - name: breeds
+    description: Breed management
+  - name: health-tests
+    description: Health test tracking
+  - name: heat-cycles
+    description: Heat cycle tracking
+  - name: progesterone
+    description: Progesterone readings
+  - name: breedings
+    description: Breeding records
+  - name: pregnancies
+    description: Pregnancy tracking
+  - name: litters
+    description: Litter management
+  - name: whelping
+    description: Whelping records
+  - name: puppies
+    description: Puppy management
+  - name: weights
+    description: Puppy weight tracking
+  - name: buyers
+    description: Buyer management
+  - name: stud-listings
+    description: Stud directory listings
+  - name: documents
+    description: Document management
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Dashboard ───────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/alerts:
+    get:
+      operationId: getDashboardAlerts
+      tags: [dashboard]
+      summary: Get dashboard alerts
+      responses:
+        "200":
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  # ─── Breeds ──────────────────────────────────────────────────────────────────
+  /breeds:
+    get:
+      operationId: listBreeds
+      tags: [breeds]
+      summary: List all breeds
+      responses:
+        "200":
+          description: Breed list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Breed"
+
+  /breeds/{breedId}/health-tests:
+    get:
+      operationId: getBreedHealthTests
+      tags: [breeds]
+      summary: Get required health tests for a breed
+      parameters:
+        - name: breedId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Health test requirements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BreedHealthTest"
+
+  # ─── Dogs ────────────────────────────────────────────────────────────────────
+  /dogs:
+    get:
+      operationId: listDogs
+      tags: [dogs]
+      summary: List all dogs
+      parameters:
+        - name: breed
+          in: query
+          schema:
+            type: string
+        - name: sex
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dog list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dog"
+    post:
+      operationId: createDog
+      tags: [dogs]
+      summary: Create a new dog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DogInput"
+      responses:
+        "201":
+          description: Dog created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dog"
+
+  /dogs/{dogId}:
+    get:
+      operationId: getDog
+      tags: [dogs]
+      summary: Get a dog by ID
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dog"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDog
+      tags: [dogs]
+      summary: Update a dog
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DogUpdate"
+      responses:
+        "200":
+          description: Updated dog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dog"
+    delete:
+      operationId: deleteDog
+      tags: [dogs]
+      summary: Delete a dog
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /dogs/lookup:
+    get:
+      operationId: lookupDogs
+      tags: [dogs]
+      summary: Search dogs by name or registration number (for pedigree autocomplete)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching dogs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dog"
+
+  /dogs/{dogId}/pedigree/{generations}:
+    get:
+      operationId: getDogPedigree
+      tags: [dogs]
+      summary: Get pedigree tree for a dog
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: generations
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pedigree tree with COI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedigreeTree"
+
+  /dogs/{dogId}/pedigree:
+    put:
+      operationId: savePedigree
+      tags: [dogs]
+      summary: Save full 3-generation pedigree for a dog
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PedigreeInput"
+      responses:
+        "200":
+          description: Updated pedigree tree
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PedigreeTree"
+
+  # ─── Health Tests ─────────────────────────────────────────────────────────────
+  /dogs/{dogId}/health-tests:
+    get:
+      operationId: listDogHealthTests
+      tags: [health-tests]
+      summary: List health tests for a dog
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Health test results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HealthTestResult"
+    post:
+      operationId: createHealthTest
+      tags: [health-tests]
+      summary: Add health test result
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HealthTestInput"
+      responses:
+        "201":
+          description: Health test created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthTestResult"
+
+  /dogs/{dogId}/health-tests/{testId}:
+    patch:
+      operationId: updateHealthTest
+      tags: [health-tests]
+      summary: Update a health test result
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HealthTestUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthTestResult"
+    delete:
+      operationId: deleteHealthTest
+      tags: [health-tests]
+      summary: Delete a health test result
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Heat Cycles ─────────────────────────────────────────────────────────────
+  /dogs/{dogId}/heat-cycles:
+    get:
+      operationId: listHeatCycles
+      tags: [heat-cycles]
+      summary: List heat cycles for a dog
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Heat cycles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HeatCycle"
+    post:
+      operationId: createHeatCycle
+      tags: [heat-cycles]
+      summary: Record a heat cycle
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeatCycleInput"
+      responses:
+        "201":
+          description: Heat cycle created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatCycle"
+
+  /dogs/{dogId}/heat-cycles/{cycleId}:
+    delete:
+      operationId: deleteHeatCycle
+      tags: [heat-cycles]
+      summary: Delete a heat cycle
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+    patch:
+      operationId: updateHeatCycle
+      tags: [heat-cycles]
+      summary: Update a heat cycle
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cycleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeatCycleUpdate"
+      responses:
+        "200":
+          description: Updated heat cycle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeatCycle"
+
+  # ─── Progesterone ─────────────────────────────────────────────────────────────
+  /dogs/{dogId}/progesterone:
+    get:
+      operationId: listProgesteroneReadings
+      tags: [progesterone]
+      summary: List progesterone readings
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Readings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProgesteroneReading"
+    post:
+      operationId: createProgesteroneReading
+      tags: [progesterone]
+      summary: Record a progesterone reading
+      parameters:
+        - name: dogId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgesteroneInput"
+      responses:
+        "201":
+          description: Reading created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgesteroneReading"
+
+  # ─── Storage ─────────────────────────────────────────────────────────────────
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+        '500':
+          description: Failed to generate upload URL.
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content streamed.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+
+  # ─── Breedings ────────────────────────────────────────────────────────────────
+  /breedings:
+    get:
+      operationId: listBreedings
+      tags: [breedings]
+      summary: List breeding records
+      parameters:
+        - name: dogId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Breeding records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Breeding"
+    post:
+      operationId: createBreeding
+      tags: [breedings]
+      summary: Create a breeding record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BreedingInput"
+      responses:
+        "201":
+          description: Breeding created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Breeding"
+
+  /breedings/{breedingId}:
+    get:
+      operationId: getBreeding
+      tags: [breedings]
+      summary: Get a breeding record
+      parameters:
+        - name: breedingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Breeding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Breeding"
+    patch:
+      operationId: updateBreeding
+      tags: [breedings]
+      summary: Update a breeding record
+      parameters:
+        - name: breedingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BreedingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Breeding"
+
+  # ─── Pregnancies ─────────────────────────────────────────────────────────────
+  /breedings/{breedingId}/pregnancy:
+    get:
+      operationId: getPregnancy
+      tags: [pregnancies]
+      summary: Get pregnancy tracker for a breeding
+      parameters:
+        - name: breedingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pregnancy with milestones
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pregnancy"
+
+  # ─── Litters ─────────────────────────────────────────────────────────────────
+  /litters:
+    get:
+      operationId: listLitters
+      tags: [litters]
+      summary: List all litters
+      responses:
+        "200":
+          description: Litter list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Litter"
+    post:
+      operationId: createLitter
+      tags: [litters]
+      summary: Create a litter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LitterInput"
+      responses:
+        "201":
+          description: Litter created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Litter"
+
+  /litters/{litterId}:
+    get:
+      operationId: getLitter
+      tags: [litters]
+      summary: Get a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Litter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Litter"
+    patch:
+      operationId: updateLitter
+      tags: [litters]
+      summary: Update a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LitterUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Litter"
+    delete:
+      operationId: deleteLitter
+      tags: [litters]
+      summary: Delete a litter and all its puppies
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Whelping ─────────────────────────────────────────────────────────────────
+  /litters/{litterId}/whelping:
+    get:
+      operationId: getWhelpingRecord
+      tags: [whelping]
+      summary: Get whelping record for a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Whelping record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhelpingRecord"
+    post:
+      operationId: createWhelpingRecord
+      tags: [whelping]
+      summary: Create whelping record
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhelpingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhelpingRecord"
+
+  # ─── Puppies ─────────────────────────────────────────────────────────────────
+  /litters/{litterId}/puppies:
+    get:
+      operationId: listPuppies
+      tags: [puppies]
+      summary: List puppies in a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Puppies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Puppy"
+    post:
+      operationId: createPuppy
+      tags: [puppies]
+      summary: Add a puppy to a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PuppyInput"
+      responses:
+        "201":
+          description: Puppy created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Puppy"
+
+  /puppies/{puppyId}:
+    get:
+      operationId: getPuppy
+      tags: [puppies]
+      summary: Get a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Puppy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Puppy"
+    delete:
+      operationId: deletePuppy
+      tags: [puppies]
+      summary: Delete a puppy and all its records
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+    patch:
+      operationId: updatePuppy
+      tags: [puppies]
+      summary: Update a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PuppyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Puppy"
+
+  # ─── Weights ─────────────────────────────────────────────────────────────────
+  /puppies/{puppyId}/weights:
+    get:
+      operationId: listWeights
+      tags: [weights]
+      summary: List weight entries for a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Weight entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeightEntry"
+    post:
+      operationId: createWeight
+      tags: [weights]
+      summary: Record a weight entry
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeightInput"
+      responses:
+        "201":
+          description: Weight recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeightEntry"
+
+  # ─── Puppy Worming ───────────────────────────────────────────────────────────
+  /puppies/{puppyId}/worming:
+    get:
+      operationId: listWorming
+      tags: [worming]
+      summary: List worming records for a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Worming records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WormingEntry"
+    post:
+      operationId: createWorming
+      tags: [worming]
+      summary: Add a worming record
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WormingInput"
+      responses:
+        "201":
+          description: Worming record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WormingEntry"
+
+  /puppies/{puppyId}/worming/{wormingId}:
+    delete:
+      operationId: deleteWorming
+      tags: [worming]
+      summary: Delete a worming record
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: wormingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Puppy Vaccinations ───────────────────────────────────────────────────────
+  /puppies/{puppyId}/vaccinations:
+    get:
+      operationId: listVaccinations
+      tags: [vaccinations]
+      summary: List vaccination records for a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vaccination records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VaccinationEntry"
+    post:
+      operationId: createVaccination
+      tags: [vaccinations]
+      summary: Add a vaccination record
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaccinationInput"
+      responses:
+        "201":
+          description: Vaccination created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VaccinationEntry"
+
+  /puppies/{puppyId}/vaccinations/{vaccinationId}:
+    delete:
+      operationId: deleteVaccination
+      tags: [vaccinations]
+      summary: Delete a vaccination record
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: vaccinationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Puppy Documents ──────────────────────────────────────────────────────────
+  /puppies/{puppyId}/documents:
+    get:
+      operationId: listPuppyDocuments
+      tags: [puppy-documents]
+      summary: List documents for a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PuppyDocument"
+    post:
+      operationId: createPuppyDocument
+      tags: [puppy-documents]
+      summary: Add a document to a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PuppyDocumentInput"
+      responses:
+        "201":
+          description: Document added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PuppyDocument"
+
+  /puppies/{puppyId}/documents/{docId}:
+    delete:
+      operationId: deletePuppyDocument
+      tags: [puppy-documents]
+      summary: Delete a puppy document
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Litter / Whelping Documents ─────────────────────────────────────────────
+  /litters/{litterId}/documents:
+    get:
+      operationId: listWhelpingDocuments
+      tags: [whelping]
+      summary: List additional documents for a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhelpingDocument"
+    post:
+      operationId: createWhelpingDocument
+      tags: [whelping]
+      summary: Upload a named document to a litter
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhelpingDocumentInput"
+      responses:
+        "201":
+          description: Document added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhelpingDocument"
+
+  /litters/{litterId}/documents/{docId}:
+    delete:
+      operationId: deleteWhelpingDocument
+      tags: [whelping]
+      summary: Delete a whelping document
+      parameters:
+        - name: litterId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Buyers ─────────────────────────────────────────────────────────────────
+  /buyers:
+    get:
+      operationId: listBuyers
+      tags: [buyers]
+      summary: List all buyers
+      responses:
+        "200":
+          description: Buyers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Buyer"
+    post:
+      operationId: createBuyer
+      tags: [buyers]
+      summary: Create a buyer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyerInput"
+      responses:
+        "201":
+          description: Buyer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Buyer"
+
+  /buyers/{buyerId}:
+    get:
+      operationId: getBuyer
+      tags: [buyers]
+      summary: Get a buyer
+      parameters:
+        - name: buyerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Buyer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Buyer"
+    patch:
+      operationId: updateBuyer
+      tags: [buyers]
+      summary: Update a buyer
+      parameters:
+        - name: buyerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyerUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Buyer"
+
+  /puppies/{puppyId}/buyer:
+    put:
+      operationId: assignBuyer
+      tags: [buyers]
+      summary: Assign a buyer to a puppy
+      parameters:
+        - name: puppyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuyerAssignment"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Puppy"
+
+  # ─── Stud Listings ───────────────────────────────────────────────────────────
+  /stud-listings:
+    get:
+      operationId: listStudListings
+      tags: [stud-listings]
+      summary: List public stud listings
+      parameters:
+        - name: breed
+          in: query
+          schema:
+            type: string
+        - name: country
+          in: query
+          schema:
+            type: string
+        - name: healthStatus
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stud listings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudListing"
+    post:
+      operationId: createStudListing
+      tags: [stud-listings]
+      summary: Create a stud listing for a dog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudListingInput"
+      responses:
+        "201":
+          description: Stud listing created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudListing"
+
+  /stud-listings/{listingId}:
+    get:
+      operationId: getStudListing
+      tags: [stud-listings]
+      summary: Get a stud listing
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Stud listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudListing"
+    patch:
+      operationId: updateStudListing
+      tags: [stud-listings]
+      summary: Update a stud listing
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudListingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudListing"
+    delete:
+      operationId: deleteStudListing
+      tags: [stud-listings]
+      summary: Delete a stud listing
+      parameters:
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Waiting List ────────────────────────────────────────────────────────────
+  /waiting-list:
+    get:
+      operationId: listWaitingList
+      tags: [waiting-list]
+      summary: List waiting list entries
+      responses:
+        "200":
+          description: Waiting list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WaitingListEntry"
+    post:
+      operationId: createWaitingListEntry
+      tags: [waiting-list]
+      summary: Add a waiting list entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaitingListEntryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitingListEntry"
+
+  /waiting-list/{entryId}:
+    get:
+      operationId: getWaitingListEntry
+      tags: [waiting-list]
+      summary: Get a waiting list entry
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitingListEntry"
+    put:
+      operationId: updateWaitingListEntry
+      tags: [waiting-list]
+      summary: Update a waiting list entry
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaitingListEntryInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitingListEntry"
+    delete:
+      operationId: deleteWaitingListEntry
+      tags: [waiting-list]
+      summary: Delete a waiting list entry
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /waiting-list/{entryId}/assign:
+    post:
+      operationId: assignWaitingListEntry
+      tags: [waiting-list]
+      summary: Assign waiting list entry to a puppy
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignPuppyBody"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitingListEntry"
+
+  /waiting-list/{entryId}/unassign:
+    post:
+      operationId: unassignWaitingListEntry
+      tags: [waiting-list]
+      summary: Remove puppy assignment from waiting list entry
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unassigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaitingListEntry"
+
+  # ─── Contracts ────────────────────────────────────────────────────────────────
+  /contracts:
+    get:
+      operationId: listContracts
+      tags: [contracts]
+      summary: List contracts
+      responses:
+        "200":
+          description: Contract list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contract"
+    post:
+      operationId: createContract
+      tags: [contracts]
+      summary: Create a contract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+
+  /contracts/{contractId}:
+    get:
+      operationId: getContract
+      tags: [contracts]
+      summary: Get a contract
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contract
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+    put:
+      operationId: updateContract
+      tags: [contracts]
+      summary: Update a contract
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+    delete:
+      operationId: deleteContract
+      tags: [contracts]
+      summary: Delete a contract
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Family Pets ─────────────────────────────────────────────────────────────
+  /pets:
+    get:
+      operationId: listPets
+      tags: [pets]
+      summary: List family pets
+      responses:
+        "200":
+          description: Pet list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FamilyPet"
+    post:
+      operationId: createPet
+      tags: [pets]
+      summary: Add a family pet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FamilyPetInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyPet"
+
+  /pets/{petId}:
+    get:
+      operationId: getPet
+      tags: [pets]
+      summary: Get a family pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyPet"
+    put:
+      operationId: updatePet
+      tags: [pets]
+      summary: Update a family pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FamilyPetUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyPet"
+    delete:
+      operationId: deletePet
+      tags: [pets]
+      summary: Delete a family pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /pets/{petId}/vaccinations:
+    get:
+      operationId: listPetVaccinations
+      tags: [pets]
+      summary: List vaccinations for a pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vaccination list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PetVaccination"
+    post:
+      operationId: createPetVaccination
+      tags: [pets]
+      summary: Log a vaccination
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetVaccinationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetVaccination"
+
+  /pets/{petId}/vaccinations/{vaccinationId}:
+    delete:
+      operationId: deletePetVaccination
+      tags: [pets]
+      summary: Delete a vaccination record
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: vaccinationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /pets/{petId}/vet-visits:
+    get:
+      operationId: listPetVetVisits
+      tags: [pets]
+      summary: List vet visits for a pet
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vet visit list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PetVetVisit"
+    post:
+      operationId: createPetVetVisit
+      tags: [pets]
+      summary: Log a vet visit
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetVetVisitInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PetVetVisit"
+
+  /pets/{petId}/vet-visits/{visitId}:
+    delete:
+      operationId: deletePetVetVisit
+      tags: [pets]
+      summary: Delete a vet visit
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: visitId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    DashboardStats:
+      type: object
+      properties:
+        totalDogs:
+          type: integer
+        activeLitters:
+          type: integer
+        totalPuppies:
+          type: integer
+        studListings:
+          type: integer
+        upcomingWhelpings:
+          type: integer
+        recentBreedings:
+          type: integer
+      required:
+        - totalDogs
+        - activeLitters
+        - totalPuppies
+        - studListings
+        - upcomingWhelpings
+        - recentBreedings
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, urgent]
+        relatedId:
+          type: ["integer", "null"]
+        relatedType:
+          type: ["string", "null"]
+      required:
+        - id
+        - type
+        - message
+        - severity
+
+    Breed:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        group:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+
+    BreedHealthTest:
+      type: object
+      properties:
+        id:
+          type: integer
+        breedId:
+          type: integer
+        testName:
+          type: string
+        required:
+          type: boolean
+        description:
+          type: ["string", "null"]
+      required:
+        - id
+        - breedId
+        - testName
+        - required
+
+    Dog:
+      type: object
+      properties:
+        id:
+          type: integer
+        registeredName:
+          type: string
+        callName:
+          type: string
+        breedId:
+          type: ["integer", "null"]
+        breedName:
+          type: ["string", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        sireId:
+          type: ["integer", "null"]
+        sireName:
+          type: ["string", "null"]
+        damId:
+          type: ["integer", "null"]
+        damName:
+          type: ["string", "null"]
+        visibility:
+          type: string
+          enum: [private, public, stud]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, retired, deceased]
+        isExternal:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - registeredName
+        - callName
+        - sex
+        - visibility
+        - status
+        - createdAt
+
+    DogInput:
+      type: object
+      properties:
+        registeredName:
+          type: string
+        callName:
+          type: string
+        breedId:
+          type: ["integer", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        sireId:
+          type: ["integer", "null"]
+        damId:
+          type: ["integer", "null"]
+        sire:
+          $ref: "#/components/schemas/ParentInput"
+        dam:
+          $ref: "#/components/schemas/ParentInput"
+        visibility:
+          type: string
+          enum: [private, public, stud]
+        photoUrl:
+          type: ["string", "null"]
+      required:
+        - registeredName
+        - callName
+        - sex
+        - visibility
+
+    DogUpdate:
+      type: object
+      properties:
+        registeredName:
+          type: string
+        callName:
+          type: string
+        breedId:
+          type: ["integer", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        sireId:
+          type: ["integer", "null"]
+        damId:
+          type: ["integer", "null"]
+        visibility:
+          type: string
+          enum: [private, public, stud]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, retired, deceased]
+
+    PedigreeNode:
+      type: object
+      properties:
+        id:
+          type: ["integer", "null"]
+        registeredName:
+          type: string
+        callName:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        sex:
+          type: ["string", "null"]
+        breedName:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        isExternal:
+          type: ["boolean", "null"]
+        sire:
+          $ref: "#/components/schemas/PedigreeNode"
+        dam:
+          $ref: "#/components/schemas/PedigreeNode"
+      required:
+        - registeredName
+
+    ParentInput:
+      type: object
+      description: Full details for a sire or dam. If registrationNumber matches an existing dog it is linked automatically; otherwise an external stub is created with the provided fields.
+      properties:
+        registeredName:
+          type: string
+        registrationNumber:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        breedId:
+          type: ["integer", "null"]
+
+    AncestorSlot:
+      type: object
+      description: A single ancestor slot in the pedigree editor
+      properties:
+        registeredName:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+
+    PedigreeInput:
+      type: object
+      description: Full 3-generation pedigree — all slots are optional
+      properties:
+        sire:
+          $ref: "#/components/schemas/AncestorSlot"
+        dam:
+          $ref: "#/components/schemas/AncestorSlot"
+        sireSire:
+          $ref: "#/components/schemas/AncestorSlot"
+        sireDam:
+          $ref: "#/components/schemas/AncestorSlot"
+        damSire:
+          $ref: "#/components/schemas/AncestorSlot"
+        damDam:
+          $ref: "#/components/schemas/AncestorSlot"
+        sireSireSire:
+          $ref: "#/components/schemas/AncestorSlot"
+        sireSireDam:
+          $ref: "#/components/schemas/AncestorSlot"
+        sireDamSire:
+          $ref: "#/components/schemas/AncestorSlot"
+        sireDamDam:
+          $ref: "#/components/schemas/AncestorSlot"
+        damSireSire:
+          $ref: "#/components/schemas/AncestorSlot"
+        damSireDam:
+          $ref: "#/components/schemas/AncestorSlot"
+        damDamSire:
+          $ref: "#/components/schemas/AncestorSlot"
+        damDamDam:
+          $ref: "#/components/schemas/AncestorSlot"
+
+    PedigreeTree:
+      type: object
+      properties:
+        dog:
+          $ref: "#/components/schemas/PedigreeNode"
+        generations:
+          type: integer
+        coi:
+          type: ["number", "null"]
+        duplicateAncestors:
+          type: array
+          items:
+            type: string
+      required:
+        - dog
+        - generations
+
+    HealthTestResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        dogId:
+          type: integer
+        testName:
+          type: string
+        result:
+          type: string
+        date:
+          type: ["string", "null"]
+        laboratory:
+          type: ["string", "null"]
+        certificateUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - dogId
+        - testName
+        - result
+        - createdAt
+
+    HealthTestInput:
+      type: object
+      properties:
+        testName:
+          type: string
+        result:
+          type: string
+        date:
+          type: ["string", "null"]
+        laboratory:
+          type: ["string", "null"]
+        certificateUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - testName
+        - result
+
+    HealthTestUpdate:
+      type: object
+      properties:
+        testName:
+          type: string
+        result:
+          type: string
+        date:
+          type: ["string", "null"]
+        laboratory:
+          type: ["string", "null"]
+        certificateUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    HeatCycle:
+      type: object
+      properties:
+        id:
+          type: integer
+        dogId:
+          type: integer
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - dogId
+        - startDate
+        - createdAt
+
+    HeatCycleInput:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - startDate
+
+    HeatCycleUpdate:
+      type: object
+      properties:
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    ProgesteroneReading:
+      type: object
+      properties:
+        id:
+          type: integer
+        dogId:
+          type: integer
+        date:
+          type: string
+        value:
+          type: number
+        units:
+          type: string
+        laboratory:
+          type: ["string", "null"]
+        ovulationPredicted:
+          type: ["boolean", "null"]
+        recommendation:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - dogId
+        - date
+        - value
+        - units
+        - createdAt
+
+    ProgesteroneInput:
+      type: object
+      properties:
+        date:
+          type: string
+        value:
+          type: number
+        units:
+          type: string
+        laboratory:
+          type: ["string", "null"]
+      required:
+        - date
+        - value
+        - units
+
+    Breeding:
+      type: object
+      properties:
+        id:
+          type: integer
+        sireId:
+          type: integer
+        sireName:
+          type: string
+        damId:
+          type: integer
+        damName:
+          type: string
+        date:
+          type: string
+        method:
+          type: string
+          enum: [natural, ai, surgical_ai]
+        tieDuration:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        ultrasoundDate:
+          type: ["string", "null"]
+        ultrasoundCompleted:
+          type: boolean
+        ultrasoundNotes:
+          type: ["string", "null"]
+        xrayDate:
+          type: ["string", "null"]
+        xrayCompleted:
+          type: boolean
+        xrayPuppyCount:
+          type: ["integer", "null"]
+        xrayNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - sireId
+        - sireName
+        - damId
+        - damName
+        - date
+        - method
+        - ultrasoundCompleted
+        - xrayCompleted
+        - createdAt
+
+    BreedingInput:
+      type: object
+      properties:
+        sireId:
+          type: integer
+        damId:
+          type: integer
+        date:
+          type: string
+        method:
+          type: string
+          enum: [natural, ai, surgical_ai]
+        tieDuration:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        ultrasoundDate:
+          type: ["string", "null"]
+        ultrasoundCompleted:
+          type: boolean
+        ultrasoundNotes:
+          type: ["string", "null"]
+        xrayDate:
+          type: ["string", "null"]
+        xrayCompleted:
+          type: boolean
+        xrayPuppyCount:
+          type: ["integer", "null"]
+        xrayNotes:
+          type: ["string", "null"]
+      required:
+        - sireId
+        - damId
+        - date
+        - method
+
+    BreedingUpdate:
+      type: object
+      properties:
+        date:
+          type: string
+        method:
+          type: string
+          enum: [natural, ai, surgical_ai]
+        tieDuration:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        ultrasoundDate:
+          type: ["string", "null"]
+        ultrasoundCompleted:
+          type: boolean
+        ultrasoundNotes:
+          type: ["string", "null"]
+        xrayDate:
+          type: ["string", "null"]
+        xrayCompleted:
+          type: boolean
+        xrayPuppyCount:
+          type: ["integer", "null"]
+        xrayNotes:
+          type: ["string", "null"]
+
+    PregnancyMilestone:
+      type: object
+      properties:
+        day:
+          type: integer
+        label:
+          type: string
+        date:
+          type: string
+        completed:
+          type: boolean
+      required:
+        - day
+        - label
+        - date
+        - completed
+
+    Pregnancy:
+      type: object
+      properties:
+        breedingId:
+          type: integer
+        breedingDate:
+          type: string
+        expectedWhelpDate:
+          type: string
+        daysPregnant:
+          type: integer
+        milestones:
+          type: array
+          items:
+            $ref: "#/components/schemas/PregnancyMilestone"
+      required:
+        - breedingId
+        - breedingDate
+        - expectedWhelpDate
+        - daysPregnant
+        - milestones
+
+    Litter:
+      type: object
+      properties:
+        id:
+          type: integer
+        sireId:
+          type: ["integer", "null"]
+        sireName:
+          type: ["string", "null"]
+        damId:
+          type: ["integer", "null"]
+        damName:
+          type: ["string", "null"]
+        breedingId:
+          type: ["integer", "null"]
+        dob:
+          type: ["string", "null"]
+        totalBorn:
+          type: ["integer", "null"]
+        liveMales:
+          type: ["integer", "null"]
+        liveFemales:
+          type: ["integer", "null"]
+        stillborn:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [expected, whelped, weaned, completed]
+        createdAt:
+          type: string
+      required:
+        - id
+        - status
+        - createdAt
+
+    LitterInput:
+      type: object
+      properties:
+        sireId:
+          type: ["integer", "null"]
+        damId:
+          type: ["integer", "null"]
+        breedingId:
+          type: ["integer", "null"]
+        dob:
+          type: ["string", "null"]
+        totalBorn:
+          type: ["integer", "null"]
+        liveMales:
+          type: ["integer", "null"]
+        liveFemales:
+          type: ["integer", "null"]
+        stillborn:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [expected, whelped, weaned, completed]
+
+    LitterUpdate:
+      type: object
+      properties:
+        dob:
+          type: ["string", "null"]
+        liveMales:
+          type: ["integer", "null"]
+        liveFemales:
+          type: ["integer", "null"]
+        stillborn:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [expected, whelped, weaned, completed]
+
+    WhelpingRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        litterId:
+          type: integer
+        startTime:
+          type: ["string", "null"]
+        endTime:
+          type: ["string", "null"]
+        complications:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - litterId
+        - createdAt
+
+    WhelpingInput:
+      type: object
+      properties:
+        startTime:
+          type: ["string", "null"]
+        endTime:
+          type: ["string", "null"]
+        complications:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    Puppy:
+      type: object
+      properties:
+        id:
+          type: integer
+        litterId:
+          type: integer
+        name:
+          type: ["string", "null"]
+        callName:
+          type: ["string", "null"]
+        registeredName:
+          type: ["string", "null"]
+        collarColour:
+          type: ["string", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        colour:
+          type: ["string", "null"]
+        markings:
+          type: ["string", "null"]
+        birthWeight:
+          type: ["number", "null"]
+        birthTime:
+          type: ["string", "null"]
+        placentaPresent:
+          type: ["boolean", "null"]
+        alive:
+          type: boolean
+        photoUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        buyerId:
+          type: ["integer", "null"]
+        buyerName:
+          type: ["string", "null"]
+        depositPaid:
+          type: ["boolean", "null"]
+        collectionDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - litterId
+        - sex
+        - alive
+        - createdAt
+
+    PuppyInput:
+      type: object
+      properties:
+        callName:
+          type: ["string", "null"]
+        registeredName:
+          type: ["string", "null"]
+        collarColour:
+          type: ["string", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        colour:
+          type: ["string", "null"]
+        markings:
+          type: ["string", "null"]
+        birthWeight:
+          type: ["number", "null"]
+        birthTime:
+          type: ["string", "null"]
+        placentaPresent:
+          type: ["boolean", "null"]
+        alive:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+      required:
+        - sex
+        - alive
+
+    PuppyUpdate:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        callName:
+          type: ["string", "null"]
+        registeredName:
+          type: ["string", "null"]
+        collarColour:
+          type: ["string", "null"]
+        sex:
+          type: string
+          enum: [male, female]
+        colour:
+          type: ["string", "null"]
+        markings:
+          type: ["string", "null"]
+        birthWeight:
+          type: ["number", "null"]
+        birthTime:
+          type: ["string", "null"]
+        placentaPresent:
+          type: ["boolean", "null"]
+        alive:
+          type: boolean
+        photoUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        collectionDate:
+          type: ["string", "null"]
+
+    WeightEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        puppyId:
+          type: integer
+        date:
+          type: string
+        weightGrams:
+          type: number
+        notes:
+          type: ["string", "null"]
+        alertTriggered:
+          type: boolean
+        overrideReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - puppyId
+        - date
+        - weightGrams
+        - alertTriggered
+        - createdAt
+
+    WeightInput:
+      type: object
+      properties:
+        date:
+          type: string
+        weightGrams:
+          type: number
+        notes:
+          type: ["string", "null"]
+        overrideReason:
+          type: ["string", "null"]
+      required:
+        - date
+        - weightGrams
+
+    WormingEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        puppyId:
+          type: integer
+        date:
+          type: string
+        product:
+          type: string
+        dose:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, puppyId, date, product, createdAt]
+
+    WormingInput:
+      type: object
+      properties:
+        date:
+          type: string
+        product:
+          type: string
+        dose:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required: [date, product]
+
+    VaccinationEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        puppyId:
+          type: integer
+        date:
+          type: string
+        vaccineName:
+          type: string
+        batchLot:
+          type: ["string", "null"]
+        vet:
+          type: ["string", "null"]
+        nextDueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, puppyId, date, vaccineName, createdAt]
+
+    VaccinationInput:
+      type: object
+      properties:
+        date:
+          type: string
+        vaccineName:
+          type: string
+        batchLot:
+          type: ["string", "null"]
+        vet:
+          type: ["string", "null"]
+        nextDueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required: [date, vaccineName]
+
+    PuppyDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+        puppyId:
+          type: integer
+        docType:
+          type: string
+        name:
+          type: string
+        fileUrl:
+          type: string
+        createdAt:
+          type: string
+      required: [id, puppyId, docType, name, fileUrl, createdAt]
+
+    PuppyDocumentInput:
+      type: object
+      properties:
+        docType:
+          type: string
+        name:
+          type: string
+        fileUrl:
+          type: string
+      required: [docType, name, fileUrl]
+
+    WhelpingDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+        litterId:
+          type: integer
+        name:
+          type: string
+        fileUrl:
+          type: string
+        createdAt:
+          type: string
+      required: [id, litterId, name, fileUrl, createdAt]
+
+    WhelpingDocumentInput:
+      type: object
+      properties:
+        name:
+          type: string
+        fileUrl:
+          type: string
+      required: [name, fileUrl]
+
+    Buyer:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        depositAmount:
+          type: ["number", "null"]
+        depositPaid:
+          type: boolean
+        balanceAmount:
+          type: ["number", "null"]
+        balancePaid:
+          type: boolean
+        contractSigned:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - firstName
+        - lastName
+        - depositPaid
+        - balancePaid
+        - contractSigned
+        - createdAt
+
+    BuyerInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        depositAmount:
+          type: ["number", "null"]
+        balanceAmount:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - firstName
+        - lastName
+
+    BuyerUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        depositAmount:
+          type: ["number", "null"]
+        depositPaid:
+          type: boolean
+        balanceAmount:
+          type: ["number", "null"]
+        balancePaid:
+          type: boolean
+        contractSigned:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+
+    BuyerAssignment:
+      type: object
+      properties:
+        buyerId:
+          type: ["integer", "null"]
+        collectionDate:
+          type: ["string", "null"]
+      required: []
+
+    StudListing:
+      type: object
+      properties:
+        id:
+          type: integer
+        dogId:
+          type: integer
+        dogName:
+          type: string
+        breedName:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        studFee:
+          type: ["number", "null"]
+        currency:
+          type: string
+        country:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        healthTested:
+          type: boolean
+        active:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - dogId
+        - dogName
+        - currency
+        - healthTested
+        - active
+        - createdAt
+
+    StudListingInput:
+      type: object
+      properties:
+        dogId:
+          type: integer
+        studFee:
+          type: ["number", "null"]
+        currency:
+          type: string
+        country:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        expiresAt:
+          type: ["string", "null"]
+      required:
+        - dogId
+        - currency
+
+    StudListingUpdate:
+      type: object
+      properties:
+        studFee:
+          type: ["number", "null"]
+        currency:
+          type: string
+        country:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+
+    AssignPuppyBody:
+      type: object
+      required: [puppyId]
+      properties:
+        puppyId:
+          type: integer
+
+    WaitingListEntry:
+      type: object
+      required: [id, name, status, depositPaid]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        breedPreference:
+          type: ["string", "null"]
+        sexPreference:
+          type: ["string", "null"]
+        colourPreference:
+          type: ["string", "null"]
+        litterPreference:
+          type: ["string", "null"]
+        timeframe:
+          type: ["string", "null"]
+        depositPaid:
+          type: boolean
+        depositAmount:
+          type: ["string", "null"]
+        priority:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+        puppyId:
+          type: ["integer", "null"]
+        puppyName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    WaitingListEntryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        breedPreference:
+          type: ["string", "null"]
+        sexPreference:
+          type: ["string", "null"]
+        colourPreference:
+          type: ["string", "null"]
+        litterPreference:
+          type: ["string", "null"]
+        timeframe:
+          type: ["string", "null"]
+        depositPaid:
+          type: boolean
+        depositAmount:
+          type: ["string", "null"]
+        priority:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    Contract:
+      type: object
+      required: [id, type, status]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        status:
+          type: string
+        puppyId:
+          type: ["integer", "null"]
+        puppyName:
+          type: ["string", "null"]
+        studListingId:
+          type: ["integer", "null"]
+        studName:
+          type: ["string", "null"]
+        waitingListId:
+          type: ["integer", "null"]
+        buyerName:
+          type: ["string", "null"]
+        buyerEmail:
+          type: ["string", "null"]
+        buyerPhone:
+          type: ["string", "null"]
+        buyerAddress:
+          type: ["string", "null"]
+        bitchOwnerName:
+          type: ["string", "null"]
+        bitchOwnerEmail:
+          type: ["string", "null"]
+        bitchOwnerPhone:
+          type: ["string", "null"]
+        bitchOwnerAddress:
+          type: ["string", "null"]
+        bitchName:
+          type: ["string", "null"]
+        bitchRegNumber:
+          type: ["string", "null"]
+        bitchBreed:
+          type: ["string", "null"]
+        salePrice:
+          type: ["string", "null"]
+        depositAmount:
+          type: ["string", "null"]
+        balanceDue:
+          type: ["string", "null"]
+        balanceDueDate:
+          type: ["string", "null"]
+        studFee:
+          type: ["string", "null"]
+        studFeePaymentTerms:
+          type: ["string", "null"]
+        specialConditions:
+          type: ["string", "null"]
+        returnPolicy:
+          type: ["string", "null"]
+        healthGuarantee:
+          type: ["string", "null"]
+        templateUrl:
+          type: ["string", "null"]
+        signedContractUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        contractDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ContractInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+        puppyId:
+          type: ["integer", "null"]
+        studListingId:
+          type: ["integer", "null"]
+        waitingListId:
+          type: ["integer", "null"]
+        buyerName:
+          type: ["string", "null"]
+        buyerEmail:
+          type: ["string", "null"]
+        buyerPhone:
+          type: ["string", "null"]
+        buyerAddress:
+          type: ["string", "null"]
+        bitchOwnerName:
+          type: ["string", "null"]
+        bitchOwnerEmail:
+          type: ["string", "null"]
+        bitchOwnerPhone:
+          type: ["string", "null"]
+        bitchOwnerAddress:
+          type: ["string", "null"]
+        bitchName:
+          type: ["string", "null"]
+        bitchRegNumber:
+          type: ["string", "null"]
+        bitchBreed:
+          type: ["string", "null"]
+        salePrice:
+          type: ["string", "null"]
+        depositAmount:
+          type: ["string", "null"]
+        balanceDue:
+          type: ["string", "null"]
+        balanceDueDate:
+          type: ["string", "null"]
+        studFee:
+          type: ["string", "null"]
+        studFeePaymentTerms:
+          type: ["string", "null"]
+        specialConditions:
+          type: ["string", "null"]
+        returnPolicy:
+          type: ["string", "null"]
+        healthGuarantee:
+          type: ["string", "null"]
+        templateUrl:
+          type: ["string", "null"]
+        signedContractUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        contractDate:
+          type: ["string", "null"]
+
+    FamilyPet:
+      type: object
+      required: [id, name, species, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        sex:
+          type: ["string", "null"]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        vetName:
+          type: ["string", "null"]
+        vetPhone:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    FamilyPetInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        sex:
+          type: ["string", "null"]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        vetName:
+          type: ["string", "null"]
+        vetPhone:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    FamilyPetUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: ["string", "null"]
+        sex:
+          type: ["string", "null"]
+        dob:
+          type: ["string", "null"]
+        colour:
+          type: ["string", "null"]
+        microchip:
+          type: ["string", "null"]
+        vetName:
+          type: ["string", "null"]
+        vetPhone:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    PetVaccination:
+      type: object
+      required: [id, petId, vaccine]
+      properties:
+        id:
+          type: integer
+        petId:
+          type: integer
+        vaccine:
+          type: string
+        dateGiven:
+          type: ["string", "null"]
+        nextDueDate:
+          type: ["string", "null"]
+        vet:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PetVaccinationInput:
+      type: object
+      required: [vaccine]
+      properties:
+        vaccine:
+          type: string
+        dateGiven:
+          type: ["string", "null"]
+        nextDueDate:
+          type: ["string", "null"]
+        vet:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    PetVetVisit:
+      type: object
+      required: [id, petId, date, reason]
+      properties:
+        id:
+          type: integer
+        petId:
+          type: integer
+        date:
+          type: string
+        reason:
+          type: string
+        vet:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        cost:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PetVetVisitInput:
+      type: object
+      required: [date, reason]
+      properties:
+        date:
+          type: string
+        reason:
+          type: string
+        vet:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        cost:
+          type: ["string", "null"]

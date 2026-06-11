@@ -1,0 +1,197 @@
+================================================================================
+  WHELPWISE — INTEGRATIONS & ENVIRONMENT VARIABLE REFERENCE
+  Generated: 2026-06-09
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+1. STRIPE (Payments & Subscriptions)
+────────────────────────────────────────────────────────────────────────────────
+
+HOW IT IS WIRED UP (currently — Replit-managed):
+  Stripe credentials are NOT stored as plain env vars in this project. Instead
+  the server calls Replit's internal Connectors API at startup to fetch the
+  secret key and webhook secret dynamically:
+
+    GET https://<REPLIT_CONNECTORS_HOSTNAME>/api/v2/connection
+        ?include_secrets=true&connector_names=stripe
+    Header: X-Replit-Token: <REPL_IDENTITY or WEB_REPL_RENEWAL>
+
+  The response returns { items[0].settings.secret, items[0].settings.webhook_secret }.
+  Source file: artifacts/api-server/src/stripeClient.ts
+
+STRIPE PRODUCTS CONFIGURED:
+  • "WhelpWise Monthly"     — $5.99 AUD/month  (base subscription)
+  • "WhelpWise Stud Listing" — $2.00 AUD/month (add-on per stud)
+  Products/prices are auto-created on first server start if they don't exist.
+
+WEBHOOK ENDPOINT:
+  POST /api/stripe/webhook
+  Stripe sends subscription lifecycle events here (checkout.session.completed,
+  customer.subscription.updated, customer.subscription.deleted).
+  Source file: artifacts/api-server/src/webhookHandlers.ts
+
+ENV VARS YOU WILL NEED IN YOUR LOCAL/STANDALONE BUILD:
+  STRIPE_SECRET_KEY          — Your Stripe secret key (sk_live_… or sk_test_…)
+  STRIPE_WEBHOOK_SECRET      — Webhook signing secret from Stripe Dashboard
+  (In the standalone build, replace the Connectors API call with a direct
+  read of these two env vars from process.env.)
+
+────────────────────────────────────────────────────────────────────────────────
+2. CLERK (Authentication)
+────────────────────────────────────────────────────────────────────────────────
+
+HOW IT IS WIRED UP:
+  Clerk handles all user sign-in/sign-up. The frontend loads the Clerk JS SDK;
+  the backend uses @clerk/express middleware to verify JWTs on every request.
+  Clerk is proxied through the Replit domain (see clerkProxyMiddleware.ts).
+
+ENV VARS YOU WILL NEED:
+  CLERK_PUBLISHABLE_KEY      — Starts with pk_test_… or pk_live_…
+  CLERK_SECRET_KEY           — Starts with sk_test_… or sk_live_…
+  VITE_CLERK_PUBLISHABLE_KEY — Same publishable key, exposed to the frontend
+
+  Frontend source: artifacts/whelpwise/src/  (uses @clerk/react)
+  Backend source:  artifacts/api-server/src/middlewares/requireAuth.ts
+                   artifacts/api-server/src/middlewares/clerkProxyMiddleware.ts
+
+────────────────────────────────────────────────────────────────────────────────
+3. OBJECT STORAGE (Dog Photos / Uploaded Files)
+────────────────────────────────────────────────────────────────────────────────
+
+HOW IT IS WIRED UP:
+  Uses Google Cloud Storage via Replit's internal sidecar endpoint
+  (http://127.0.0.1:1106) for credential vending. This sidecar is
+  Replit-specific and will NOT be available outside Replit.
+
+  For a standalone build you have two options:
+    a) Replace with standard GCS credentials (GOOGLE_APPLICATION_CREDENTIALS
+       or service account JSON) — minimal code change in objectStorage.ts
+    b) Replace with any S3-compatible store (AWS S3, Cloudflare R2, MinIO)
+       by swapping the @google-cloud/storage client
+
+ENV VARS CURRENTLY USED (Replit-specific):
+  PRIVATE_OBJECT_DIR         — GCS path prefix for private uploads
+                               e.g. /my-bucket/whelpwise/private
+  PUBLIC_OBJECT_SEARCH_PATHS — Comma-separated GCS path prefixes for public files
+                               e.g. /my-bucket/whelpwise/public
+
+ENV VARS YOU WILL NEED IN YOUR STANDALONE BUILD:
+  (Replace the sidecar-based auth with one of the following)
+  GOOGLE_APPLICATION_CREDENTIALS  — Path to GCS service account JSON  (option a)
+  GCS_BUCKET_NAME                 — Your GCS bucket name              (option a)
+  — OR —
+  S3_ACCESS_KEY_ID                — If switching to S3/R2/MinIO       (option b)
+  S3_SECRET_ACCESS_KEY
+  S3_BUCKET_NAME
+  S3_ENDPOINT                     — For non-AWS endpoints (R2, MinIO)
+
+NOTE ON EXISTING UPLOADED FILES:
+  Photos uploaded while on Replit are stored in Replit's managed GCS bucket.
+  Before leaving Replit, use the Replit Object Storage UI (or gsutil) to
+  download and transfer those files to your new storage provider.
+
+────────────────────────────────────────────────────────────────────────────────
+4. EMAIL (Resend)
+────────────────────────────────────────────────────────────────────────────────
+
+HOW IT IS WIRED UP:
+  Transactional emails (buyer invites, contracts) sent via Resend API.
+  Source file: artifacts/api-server/src/lib/email.ts
+
+ENV VARS YOU WILL NEED:
+  RESEND_API_KEY             — API key from resend.com dashboard
+
+────────────────────────────────────────────────────────────────────────────────
+5. DATABASE (PostgreSQL)
+────────────────────────────────────────────────────────────────────────────────
+
+HOW IT IS WIRED UP:
+  Standard PostgreSQL via Drizzle ORM. The connection string is a single env var.
+
+ENV VARS YOU WILL NEED:
+  DATABASE_URL               — Full Postgres connection string
+                               e.g. postgresql://user:pass@host:5432/dbname
+
+SCHEMA SOURCE:    lib/db/src/schema/
+MIGRATIONS:       lib/db/drizzle/ (if present) or run `pnpm --filter @workspace/db run push`
+DUMP FILES:       migrated-data/database_dump.sql   (full schema + data)
+                  migrated-data/data_only.sql        (data only, for re-importing into
+                                                      an existing schema)
+
+DATABASE TABLES (27 total) with current row counts:
+  breed_health_tests    :   10 rows
+  breedings             :    1 row
+  breeds                :  255 rows
+  buyers                :    2 rows
+  chat_conversations    :    0 rows
+  chat_messages         :    0 rows
+  contracts             :    1 row
+  dogs                  :   11 rows
+  family_pets           :    0 rows
+  health_test_results   :   10 rows
+  heat_cycles           :    2 rows
+  litters               :    2 rows
+  pet_vaccinations      :    0 rows
+  pet_vet_visits        :    0 rows
+  progesterone_readings :    3 rows
+  puppies               :   10 rows
+  puppy_documents       :    0 rows
+  puppy_owner_accounts  :    0 rows
+  puppy_owner_invites   :    0 rows
+  puppy_vaccinations    :    0 rows
+  puppy_worming         :    0 rows
+  stud_listings         :    2 rows
+  users                 :    1 row
+  waiting_list          :    1 row
+  weight_entries        :   15 rows
+  whelping_documents    :    0 rows
+  whelping_records      :    1 row
+
+────────────────────────────────────────────────────────────────────────────────
+6. CHAT ENCRYPTION
+────────────────────────────────────────────────────────────────────────────────
+
+ENV VARS YOU WILL NEED:
+  CHAT_ENCRYPTION_KEY        — AES key used to encrypt chat messages at rest
+                               Generate a new one with: openssl rand -hex 32
+
+────────────────────────────────────────────────────────────────────────────────
+7. COMPLETE ENV VAR CHECKLIST FOR STANDALONE BUILD
+────────────────────────────────────────────────────────────────────────────────
+
+  # Database
+  DATABASE_URL
+
+  # Auth (Clerk)
+  CLERK_PUBLISHABLE_KEY
+  CLERK_SECRET_KEY
+  VITE_CLERK_PUBLISHABLE_KEY          # frontend only
+
+  # Payments (Stripe — replace Connectors call with direct env vars)
+  STRIPE_SECRET_KEY
+  STRIPE_WEBHOOK_SECRET
+
+  # Email
+  RESEND_API_KEY
+
+  # File Storage (replace GCS sidecar with one of these sets)
+  GOOGLE_APPLICATION_CREDENTIALS      # if keeping GCS
+  GCS_BUCKET_NAME
+  # — or —
+  S3_ACCESS_KEY_ID                    # if switching to S3/R2/MinIO
+  S3_SECRET_ACCESS_KEY
+  S3_BUCKET_NAME
+  S3_ENDPOINT
+
+  # Chat encryption
+  CHAT_ENCRYPTION_KEY
+
+  # Server runtime (set by your hosting platform, not Replit-specific)
+  PORT
+  NODE_ENV
+  BASE_PATH                           # set to "" or "/" for standalone
+  LOG_LEVEL                           # optional, defaults to "info"
+
+================================================================================
+  END OF INTEGRATIONS REFERENCE
+================================================================================
