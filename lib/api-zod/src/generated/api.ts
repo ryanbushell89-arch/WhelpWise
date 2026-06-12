@@ -294,59 +294,73 @@ export const SavePedigreeParams = zod.object({
 export const SavePedigreeBody = zod.object({
   "sire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "dam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireSireSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireSireDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireDamSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireDamDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damSireSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damSireDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damDamSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damDamDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish()
+  "registrationNumber": zod.string().nullish(),
+  "colour": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor')
 }).describe('Full 3-generation pedigree — all slots are optional')
 

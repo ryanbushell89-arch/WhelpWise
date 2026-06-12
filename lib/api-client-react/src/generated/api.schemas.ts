@@ -259,6 +259,8 @@ export interface AncestorSlot {
   registeredName?: string | null;
   /** @nullable */
   registrationNumber?: string | null;
+  /** @nullable */
+  colour?: string | null;
 }
 
 /**

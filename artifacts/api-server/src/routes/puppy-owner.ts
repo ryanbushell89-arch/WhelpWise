@@ -16,10 +16,8 @@ import type { Request } from "express";
 
 const router = Router();
 
-router.use(requireAuth, requirePuppyOwner);
-
 // GET /puppy-owner/me — account + puppy profile
-router.get("/puppy-owner/me", async (req, res): Promise<void> => {
+router.get("/puppy-owner/me", requireAuth, requirePuppyOwner, async (req, res): Promise<void> => {
   const { puppyOwnerAccount } = req as PuppyOwnerRequest;
   const puppyId = puppyOwnerAccount.puppyId;
 
@@ -60,7 +58,7 @@ router.get("/puppy-owner/me", async (req, res): Promise<void> => {
 });
 
 // GET /puppy-owner/weights — weight history
-router.get("/puppy-owner/weights", async (req, res): Promise<void> => {
+router.get("/puppy-owner/weights", requireAuth, requirePuppyOwner, async (req, res): Promise<void> => {
   const { puppyOwnerAccount } = req as PuppyOwnerRequest;
 
   const weights = await db
@@ -73,7 +71,7 @@ router.get("/puppy-owner/weights", async (req, res): Promise<void> => {
 });
 
 // GET /puppy-owner/vaccinations — vaccination records
-router.get("/puppy-owner/vaccinations", async (req, res): Promise<void> => {
+router.get("/puppy-owner/vaccinations", requireAuth, requirePuppyOwner, async (req, res): Promise<void> => {
   const { puppyOwnerAccount } = req as PuppyOwnerRequest;
 
   const vaccinations = await db
@@ -86,7 +84,7 @@ router.get("/puppy-owner/vaccinations", async (req, res): Promise<void> => {
 });
 
 // GET /puppy-owner/worming — worming records
-router.get("/puppy-owner/worming", async (req, res): Promise<void> => {
+router.get("/puppy-owner/worming", requireAuth, requirePuppyOwner, async (req, res): Promise<void> => {
   const { puppyOwnerAccount } = req as PuppyOwnerRequest;
 
   const worming = await db
@@ -99,7 +97,7 @@ router.get("/puppy-owner/worming", async (req, res): Promise<void> => {
 });
 
 // GET /puppy-owner/documents — documents
-router.get("/puppy-owner/documents", async (req, res): Promise<void> => {
+router.get("/puppy-owner/documents", requireAuth, requirePuppyOwner, async (req, res): Promise<void> => {
   const { puppyOwnerAccount } = req as PuppyOwnerRequest;
 
   const documents = await db
@@ -112,7 +110,7 @@ router.get("/puppy-owner/documents", async (req, res): Promise<void> => {
 });
 
 // GET /puppy-owner/health-reminders — overdue vaccines + worming alerts
-router.get("/puppy-owner/health-reminders", async (req, res): Promise<void> => {
+router.get("/puppy-owner/health-reminders", requireAuth, requirePuppyOwner, async (req, res): Promise<void> => {
   const { puppyOwnerAccount } = req as PuppyOwnerRequest;
   const puppyId = puppyOwnerAccount.puppyId;
   const today = new Date().toISOString().split("T")[0];

@@ -138,6 +138,7 @@ async function findOrCreateAncestor(
     callName: name || regNum || "Unknown",
     sex: resolvedSex,
     isExternal: "true",
+    inKennel: "false",
     registrationNumber: regNum || null,
     microchip: data.microchip?.trim() || null,
     dob: data.dob || null,
