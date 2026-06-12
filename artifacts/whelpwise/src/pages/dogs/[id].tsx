@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "health" | "heat" | "pedigree";
 
@@ -750,90 +751,206 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function PedigreeNode({ node, depth, label }: { node: any; depth: number; label?: string }) {
+// ─── Pedigree layout constants ────────────────────────────────────────────────
+
+const CELL_H = 68; // px per grid row (8 equal rows)
+const CONN_W = 20; // connector column width
+const NODE_W = [176, 158, 146, 134] as const; // column widths per generation
+
+// ─── PedigreeCard ─────────────────────────────────────────────────────────────
+
+function PedigreeCard({ node, gen, label }: { node: any; gen: number; label?: string }) {
   if (!node) {
     return (
-      <div className="rounded border border-dashed border-muted-foreground/20 text-xs text-muted-foreground/40 flex flex-col items-center justify-center px-2 py-2 min-h-[52px]">
-        {label && <div className="text-[10px] uppercase tracking-wide font-semibold mb-0.5 opacity-60">{label}</div>}
-        <span>Unknown</span>
+      <div className="rounded border border-dashed border-border/25 h-full w-full flex items-center justify-center">
+        <span className="text-[10px] text-muted-foreground/25 select-none">—</span>
       </div>
     );
   }
   return (
-    <div className={`bg-card border rounded-lg p-2 text-xs min-h-[52px] ${depth === 0 ? "border-primary" : ""}`}>
-      {label && <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/70 mb-0.5">{label}</div>}
-      <div className="font-semibold truncate leading-tight">{node.registeredName}</div>
-      {node.registrationNumber && <div className="text-muted-foreground font-mono text-[10px] truncate">{node.registrationNumber}</div>}
-      {node.breedName && <div className="text-muted-foreground truncate">{node.breedName}</div>}
-      <div className="flex items-center gap-1 mt-1 flex-wrap">
-        <Badge variant={node.sex === "male" ? "default" : "secondary"} className="text-[10px] capitalize">{node.sex}</Badge>
-        {node.isExternal && <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 dark:border-amber-800">stub</Badge>}
+    <div className={cn(
+      "rounded-md border p-1.5 flex flex-col justify-center gap-[2px] h-full w-full overflow-hidden",
+      gen === 0 ? "border-primary/40 bg-primary/5" : "border-border/70 bg-card",
+    )}>
+      {label && (
+        <div className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground/50 leading-none">{label}</div>
+      )}
+      <div className={cn("font-semibold leading-tight truncate", gen <= 1 ? "text-[11px]" : "text-[10px]")}>
+        {node.registeredName}
+      </div>
+      {node.registrationNumber && (
+        <div className="text-[10px] font-mono text-muted-foreground/60 truncate leading-tight">
+          {node.registrationNumber}
+        </div>
+      )}
+      {node.colour && gen < 3 && (
+        <div className="text-[10px] text-muted-foreground/50 truncate leading-tight">{node.colour}</div>
+      )}
+      <div className="flex gap-1 flex-wrap">
+        {node.sex && (
+          <Badge
+            variant={node.sex === "male" ? "default" : "secondary"}
+            className="text-[9px] px-1 py-0 h-3.5 leading-none capitalize"
+          >
+            {node.sex}
+          </Badge>
+        )}
+        {node.isExternal && (
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 leading-none text-amber-600 border-amber-300 dark:border-amber-800">
+            stub
+          </Badge>
+        )}
       </div>
     </div>
   );
 }
 
-function PedigreeView({ node }: { node: any }) {
+// ─── SVG branch connector ──────────────────────────────────────────────────────
+// Draws: horizontal arm from parent center → vertical bar → two arms to children.
+// Works because topY = h/4 = center of top half, botY = 3h/4 = center of bottom half.
+
+function PedigreeConnector({ rows }: { rows: number }) {
+  const h = rows * CELL_H;
+  const mid = h / 2;
+  const top = h / 4;
+  const bot = (h * 3) / 4;
+  const cx = CONN_W / 2;
+  return (
+    <svg
+      width={CONN_W}
+      height={h}
+      viewBox={`0 0 ${CONN_W} ${h}`}
+      className="block shrink-0"
+      style={{ color: "hsl(var(--border))" }}
+    >
+      {/* Arm from parent (left edge → midpoint column) */}
+      <line x1={0} y1={mid} x2={cx} y2={mid} stroke="currentColor" strokeWidth="1" />
+      {/* Vertical bar between child arm points */}
+      <line x1={cx} y1={top} x2={cx} y2={bot} stroke="currentColor" strokeWidth="1" />
+      {/* Arms to top and bottom children */}
+      <line x1={cx} y1={top} x2={CONN_W} y2={top} stroke="currentColor" strokeWidth="1" />
+      <line x1={cx} y1={bot} x2={CONN_W} y2={bot} stroke="currentColor" strokeWidth="1" />
+    </svg>
+  );
+}
+
+// ─── PedigreeView ─────────────────────────────────────────────────────────────
+
+function PedigreeView({ node: n }: { node: any }) {
+  const p2 = "3px 6px 3px 0"; // padding for left-padded node cells
+  const p3 = "3px 0";         // padding for rightmost column (no right padding)
+
+  // Cell wrapper: fills grid area, vertically centers content
+  function Cell({ col, row, rowEnd, pad, children }: {
+    col: number; row: number; rowEnd?: number; pad?: string; children: React.ReactNode;
+  }) {
+    return (
+      <div style={{
+        gridColumn: col,
+        gridRow: rowEnd ? `${row} / ${rowEnd}` : row,
+        padding: pad ?? p2,
+        display: "flex",
+        alignItems: "stretch",
+      }}>
+        {children}
+      </div>
+    );
+  }
+
+  // Great-grandparent shorthand labels: S/D = sire/dam from the subject's perspective
+  const ggp = [
+    { row: 1, nd: n?.sire?.sire?.sire, lbl: "S·S·S" },
+    { row: 2, nd: n?.sire?.sire?.dam,  lbl: "S·S·D" },
+    { row: 3, nd: n?.sire?.dam?.sire,  lbl: "S·D·S" },
+    { row: 4, nd: n?.sire?.dam?.dam,   lbl: "S·D·D" },
+    { row: 5, nd: n?.dam?.sire?.sire,  lbl: "D·S·S" },
+    { row: 6, nd: n?.dam?.sire?.dam,   lbl: "D·S·D" },
+    { row: 7, nd: n?.dam?.dam?.sire,   lbl: "D·D·S" },
+    { row: 8, nd: n?.dam?.dam?.dam,    lbl: "D·D·D" },
+  ];
+
   return (
     <>
-      {/* ── Mobile: stacked by generation ── */}
-      <div className="md:hidden space-y-4">
-        <div>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Parents</p>
-          <div className="grid grid-cols-2 gap-2">
-            <PedigreeNode node={node?.sire} depth={1} label="Sire" />
-            <PedigreeNode node={node?.dam} depth={1} label="Dam" />
+      {/* ── Mobile: stacked by generation ─────────────────────────────────── */}
+      <div className="md:hidden space-y-5">
+        {([
+          { label: "Parents", items: [
+            { nd: n?.sire, lbl: "Sire" }, { nd: n?.dam, lbl: "Dam" },
+          ]},
+          { label: "Grandparents", items: [
+            { nd: n?.sire?.sire, lbl: "Sire's Sire" }, { nd: n?.sire?.dam, lbl: "Sire's Dam" },
+            { nd: n?.dam?.sire,  lbl: "Dam's Sire"  }, { nd: n?.dam?.dam,  lbl: "Dam's Dam"  },
+          ]},
+          { label: "Great-Grandparents", items: ggp.map(g => ({ nd: g.nd, lbl: g.lbl })) },
+        ] as const).map(({ label, items }) => (
+          <div key={label}>
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{label}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {items.map(({ nd, lbl }) => (
+                <div key={lbl} style={{ height: 64 }}>
+                  <PedigreeCard node={nd} gen={1} label={lbl} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Grandparents</p>
-          <div className="grid grid-cols-2 gap-2">
-            <PedigreeNode node={node?.sire?.sire} depth={2} label="Sire's Sire" />
-            <PedigreeNode node={node?.dam?.sire} depth={2} label="Dam's Sire" />
-            <PedigreeNode node={node?.sire?.dam} depth={2} label="Sire's Dam" />
-            <PedigreeNode node={node?.dam?.dam} depth={2} label="Dam's Dam" />
-          </div>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Great-Grandparents</p>
-          <div className="grid grid-cols-2 gap-2">
-            <PedigreeNode node={node?.sire?.sire?.sire} depth={3} label="SS's Sire" />
-            <PedigreeNode node={node?.dam?.sire?.sire} depth={3} label="DS's Sire" />
-            <PedigreeNode node={node?.sire?.sire?.dam} depth={3} label="SS's Dam" />
-            <PedigreeNode node={node?.dam?.sire?.dam} depth={3} label="DS's Dam" />
-            <PedigreeNode node={node?.sire?.dam?.sire} depth={3} label="SD's Sire" />
-            <PedigreeNode node={node?.dam?.dam?.sire} depth={3} label="DD's Sire" />
-            <PedigreeNode node={node?.sire?.dam?.dam} depth={3} label="SD's Dam" />
-            <PedigreeNode node={node?.dam?.dam?.dam} depth={3} label="DD's Dam" />
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* ── Desktop: traditional horizontal tree ── */}
-      <div className="hidden md:block overflow-x-auto">
-        <div className="min-w-[640px]">
-          <div className="grid grid-cols-4 gap-2">
-            <div className="flex items-center"><PedigreeNode node={node} depth={0} /></div>
-            <div className="flex flex-col justify-around gap-2">
-              <PedigreeNode node={node?.sire} depth={1} label="Sire" />
-              <PedigreeNode node={node?.dam} depth={1} label="Dam" />
+      {/* ── Desktop: professional landscape grid ───────────────────────────── */}
+      <div className="hidden md:block">
+        {/* Generation headers */}
+        <div className="flex mb-1" style={{ minWidth: 660 }}>
+          {(["Subject", "Parents", "Grandparents", "Great-Grandparents"] as const).map((heading, i) => (
+            <div key={heading} style={{ width: NODE_W[i], marginRight: i < 3 ? CONN_W : 0 }}>
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60 pl-1">
+                {heading}
+              </span>
             </div>
-            <div className="flex flex-col justify-around gap-2">
-              <PedigreeNode node={node?.sire?.sire} depth={2} label="SS" />
-              <PedigreeNode node={node?.sire?.dam} depth={2} label="SD" />
-              <PedigreeNode node={node?.dam?.sire} depth={2} label="DS" />
-              <PedigreeNode node={node?.dam?.dam} depth={2} label="DD" />
-            </div>
-            <div className="flex flex-col justify-around gap-2">
-              <PedigreeNode node={node?.sire?.sire?.sire} depth={3} label="SSS" />
-              <PedigreeNode node={node?.sire?.sire?.dam} depth={3} label="SSD" />
-              <PedigreeNode node={node?.sire?.dam?.sire} depth={3} label="SDS" />
-              <PedigreeNode node={node?.sire?.dam?.dam} depth={3} label="SDD" />
-              <PedigreeNode node={node?.dam?.sire?.sire} depth={3} label="DSS" />
-              <PedigreeNode node={node?.dam?.sire?.dam} depth={3} label="DSD" />
-              <PedigreeNode node={node?.dam?.dam?.sire} depth={3} label="DDS" />
-              <PedigreeNode node={node?.dam?.dam?.dam} depth={3} label="DDD" />
-            </div>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `${NODE_W[0]}px ${CONN_W}px ${NODE_W[1]}px ${CONN_W}px ${NODE_W[2]}px ${CONN_W}px ${NODE_W[3]}px`,
+              gridTemplateRows: `repeat(8, ${CELL_H}px)`,
+              minWidth: 660,
+            }}
+          >
+            {/* Subject — spans all 8 rows */}
+            <Cell col={1} row={1} rowEnd={9}><PedigreeCard node={n} gen={0} /></Cell>
+
+            {/* Subject → Parents connector */}
+            <div style={{ gridColumn: 2, gridRow: "1 / 9" }}><PedigreeConnector rows={8} /></div>
+
+            {/* Parents */}
+            <Cell col={3} row={1} rowEnd={5} pad={p2}><PedigreeCard node={n?.sire} gen={1} label="Sire" /></Cell>
+            <Cell col={3} row={5} rowEnd={9} pad={p2}><PedigreeCard node={n?.dam}  gen={1} label="Dam"  /></Cell>
+
+            {/* Sire → Grandparents connector */}
+            <div style={{ gridColumn: 4, gridRow: "1 / 5" }}><PedigreeConnector rows={4} /></div>
+            {/* Dam → Grandparents connector */}
+            <div style={{ gridColumn: 4, gridRow: "5 / 9" }}><PedigreeConnector rows={4} /></div>
+
+            {/* Grandparents */}
+            <Cell col={5} row={1} rowEnd={3} pad={p2}><PedigreeCard node={n?.sire?.sire} gen={2} label="Sire's Sire" /></Cell>
+            <Cell col={5} row={3} rowEnd={5} pad={p2}><PedigreeCard node={n?.sire?.dam}  gen={2} label="Sire's Dam"  /></Cell>
+            <Cell col={5} row={5} rowEnd={7} pad={p2}><PedigreeCard node={n?.dam?.sire}  gen={2} label="Dam's Sire"  /></Cell>
+            <Cell col={5} row={7} rowEnd={9} pad={p2}><PedigreeCard node={n?.dam?.dam}   gen={2} label="Dam's Dam"   /></Cell>
+
+            {/* Grandparents → Great-Grandparents connectors */}
+            <div style={{ gridColumn: 6, gridRow: "1 / 3" }}><PedigreeConnector rows={2} /></div>
+            <div style={{ gridColumn: 6, gridRow: "3 / 5" }}><PedigreeConnector rows={2} /></div>
+            <div style={{ gridColumn: 6, gridRow: "5 / 7" }}><PedigreeConnector rows={2} /></div>
+            <div style={{ gridColumn: 6, gridRow: "7 / 9" }}><PedigreeConnector rows={2} /></div>
+
+            {/* Great-Grandparents */}
+            {ggp.map(({ row, nd, lbl }) => (
+              <Cell key={row} col={7} row={row} pad={p3}>
+                <PedigreeCard node={nd} gen={3} label={lbl} />
+              </Cell>
+            ))}
           </div>
         </div>
       </div>
