@@ -65,3 +65,10 @@ replit.md
 
 # lib build outputs (generated, not source)
 lib/*/dist/
+
+# Desktop app — runtime-generated files
+desktop-app/__pycache__/
+desktop-app/ui/__pycache__/
+desktop-app/*.db
+desktop-app/build/
+desktop-app/dist/
