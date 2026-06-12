@@ -34,9 +34,6 @@ def main():
     app.setApplicationName("Invoicing Lite")
     app.setOrganizationName("Invoicing Lite")
 
-    # Crisp rendering on high-DPI displays
-    app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
-
     default_font = QFont("Segoe UI", 10)
     app.setFont(default_font)
 
