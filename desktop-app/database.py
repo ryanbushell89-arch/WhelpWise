@@ -5,7 +5,7 @@ from datetime import datetime, date
 
 class Database:
     def __init__(self, base_dir):
-        self.db_path = os.path.join(base_dir, 'whelpwise.db')
+        self.db_path = os.path.join(base_dir, 'invoicing_lite.db')
         self._conn = None
 
     def _get_conn(self):

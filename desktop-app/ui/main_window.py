@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
         self.db = db
         self.base_dir = base_dir
 
-        self.setWindowTitle("WhelpWise Invoicing")
+        self.setWindowTitle("Invoicing Lite")
         self.setMinimumSize(1100, 750)
         self.resize(1200, 820)
         self.setStyleSheet(APP_STYLE)
@@ -166,4 +166,4 @@ class MainWindow(QMainWindow):
 
         status = QStatusBar()
         self.setStatusBar(status)
-        status.showMessage("WhelpWise Invoicing  –  Ready")
+        status.showMessage("Invoicing Lite  –  Ready")

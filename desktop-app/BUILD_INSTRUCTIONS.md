@@ -1,4 +1,4 @@
-# WhelpWise Invoicing — Build & Run Instructions
+# Invoicing Lite — Build & Run Instructions
 
 ## Project structure
 
@@ -16,7 +16,7 @@ desktop-app/
 │   └── history_tab.py    # Invoice history & PDF re-export
 ├── assets/               # Uploaded logo stored here at runtime
 ├── requirements.txt
-├── WhelpWise.spec        # PyInstaller build spec
+├── InvoicingLite.spec        # PyInstaller build spec
 └── BUILD_INSTRUCTIONS.md
 ```
 
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The app writes `whelpwise.db` and `assets/` beside `main.py`.
+The app writes `invoicing_lite.db` and `assets/` beside `main.py`.
 
 ---
 
@@ -60,13 +60,13 @@ pip install -r requirements.txt
 ### 2.2 — Build the executable
 
 ```cmd
-pyinstaller WhelpWise.spec
+pyinstaller InvoicingLite.spec
 ```
 
 PyInstaller places the finished file at:
 
 ```
-desktop-app\dist\WhelpWise.exe
+desktop-app\dist\InvoicingLite.exe
 ```
 
 > **Tip — optional UPX compression**
@@ -76,15 +76,15 @@ desktop-app\dist\WhelpWise.exe
 
 ### 2.3 — Distribute
 
-Copy **only** `dist\WhelpWise.exe` to any Windows 10/11 computer.
+Copy **only** `dist\InvoicingLite.exe` to any Windows 10/11 computer.
 No Python installation is required on the target machine.
 
-When the user runs `WhelpWise.exe` for the first time, the app creates:
+When the user runs `InvoicingLite.exe` for the first time, the app creates:
 
 ```
 (same folder as the .exe)
-├── WhelpWise.exe
-├── whelpwise.db       ← created automatically
+├── InvoicingLite.exe
+├── invoicing_lite.db       ← created automatically
 └── assets/            ← created automatically (logo stored here)
 ```
 
@@ -98,11 +98,11 @@ When the user runs `WhelpWise.exe` for the first time, the app creates:
 
 1. Prepare a 256×256 (or multi-size) `.ico` file and save it as
    `desktop-app\assets\icon.ico`.
-2. Open `WhelpWise.spec` and uncomment the `icon=` line:
+2. Open `InvoicingLite.spec` and uncomment the `icon=` line:
    ```python
    icon='assets/icon.ico',
    ```
-3. Re-run `pyinstaller WhelpWise.spec`.
+3. Re-run `pyinstaller InvoicingLite.spec`.
 
 ---
 

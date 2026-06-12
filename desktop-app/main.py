@@ -1,5 +1,5 @@
 """
-WhelpWise Invoicing — entry point.
+Invoicing Lite — entry point.
 
 Run directly:   python main.py
 Frozen (.exe):  Works automatically via PyInstaller.
@@ -31,8 +31,8 @@ def main():
     from ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
-    app.setApplicationName("WhelpWise Invoicing")
-    app.setOrganizationName("WhelpWise")
+    app.setApplicationName("Invoicing Lite")
+    app.setOrganizationName("Invoicing Lite")
 
     # Crisp rendering on high-DPI displays
     app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)

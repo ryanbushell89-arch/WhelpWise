@@ -1,10 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for WhelpWise Invoicing
+# PyInstaller spec for Invoicing Lite
 #
 # Build command (run from the desktop-app directory):
-#   pyinstaller WhelpWise.spec
+#   pyinstaller InvoicingLite.spec
 #
-# Output:  dist/WhelpWise.exe
+# Output:  dist/InvoicingLite.exe
 
 block_cipher = None
 
@@ -82,7 +82,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='WhelpWise',
+    name='InvoicingLite',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
