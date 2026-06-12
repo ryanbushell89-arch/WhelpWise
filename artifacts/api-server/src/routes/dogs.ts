@@ -74,6 +74,7 @@ async function dogWithNames(dog: typeof dogsTable.$inferSelect) {
     photoUrl: dog.photoUrl,
     status: dog.status,
     isExternal: dog.isExternal === "true",
+    inKennel: dog.inKennel !== "false",
     createdAt: dog.createdAt.toISOString(),
   };
 }
@@ -159,6 +160,7 @@ router.get("/dogs", async (req, res): Promise<void> => {
   const conditions = [
     eq(dogsTable.userId, userId),
     ne(dogsTable.isExternal, "true"),
+    eq(dogsTable.inKennel, "true"),
   ];
   if (sex) conditions.push(eq(dogsTable.sex, sex));
   if (status) conditions.push(eq(dogsTable.status, status));
@@ -188,6 +190,11 @@ router.post("/dogs", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const data = parsed.data;
 
+  // Ownership flags — read directly from body (outside the generated schema)
+  // isOwned defaults true for backward compat; addToKennel defaults true for owned dogs
+  const isOwned: boolean = req.body.isOwned !== false;
+  const addToKennel: boolean = isOwned ? req.body.addToKennel !== false : false;
+
   // Resolve sire — explicit sireId wins; fall back to sire object for auto-resolution
   let sireId: number | null = data.sireId ?? null;
   if (!sireId && (data as any).sire) {
@@ -213,7 +220,9 @@ router.post("/dogs", async (req, res): Promise<void> => {
     damId,
     visibility: data.visibility,
     photoUrl: data.photoUrl ?? null,
-    userId,
+    userId: isOwned ? userId : null,
+    isExternal: isOwned ? "false" : "true",
+    inKennel: (isOwned && addToKennel) ? "true" : "false",
   }).returning();
   if (dog.registrationNumber) await promoteStubs(dog.registrationNumber, dog.id);
   res.status(201).json(await dogWithNames(dog));
@@ -252,7 +261,11 @@ router.get("/dogs/lookup-by-reg", async (req, res): Promise<void> => {
   const [dog] = await db.select().from(dogsTable)
     .where(and(
       eq(dogsTable.registrationNumber, reg),
-      or(eq(dogsTable.userId, userId), eq(dogsTable.isExternal, "true")),
+      or(
+        eq(dogsTable.userId, userId),
+        eq(dogsTable.isExternal, "true"),
+        eq(dogsTable.inKennel, "false"), // pedigree-only records are findable by all
+      ),
     ))
     .limit(1);
 

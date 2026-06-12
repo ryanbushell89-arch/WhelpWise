@@ -12,7 +12,7 @@ RUN npm install -g pnpm@latest
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY tsconfig.base.json tsconfig.json ./
 COPY lib/api-client-react lib/api-client-react
 COPY lib/api-zod lib/api-zod
@@ -37,7 +37,7 @@ RUN npm install -g pnpm@latest
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY tsconfig.base.json tsconfig.json ./
 COPY lib/db lib/db
 COPY lib/api-zod lib/api-zod
@@ -46,8 +46,8 @@ COPY artifacts/api-server artifacts/api-server
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @workspace/api-server run build
 
-# Install only production dependencies for runtime
-RUN pnpm install --frozen-lockfile --prod
+# pnpm deploy creates a self-contained dir with all runtime deps properly flattened
+RUN pnpm deploy --legacy --filter @workspace/api-server --prod /app/deploy
 
 
 # ── Stage 3: Production runtime ───────────────────────────────
@@ -61,8 +61,8 @@ COPY --from=api-builder /app/artifacts/api-server/dist ./dist
 # Built frontend static files — served by Express as /public
 COPY --from=frontend-builder /app/artifacts/whelpwise/dist/public ./dist/public
 
-# Production node_modules (needed for externalized packages: @google-cloud/*, pdfkit, etc.)
-COPY --from=api-builder /app/node_modules ./node_modules
+# Production node_modules from pnpm deploy — flat structure, all externals accessible
+COPY --from=api-builder /app/deploy/node_modules ./node_modules
 
 ENV NODE_ENV=production
 ENV PORT=5000

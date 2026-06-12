@@ -68,6 +68,7 @@ router.get("/users/me", requireAuth, async (req, res): Promise<void> => {
 
   const { subscriptionStatus, trialEndsAt, currentPeriodEnd, hasStudAddon } = await getSubscriptionStatus(user);
 
+  res.setHeader("Cache-Control", "no-store");
   res.json({
     id: user.id,
     email: user.email,

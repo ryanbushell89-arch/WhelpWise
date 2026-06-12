@@ -3,12 +3,14 @@ import { useLocation } from "wouter";
 import {
   useListBreeds, useCreateDog, useUpdateDog,
 } from "@workspace/api-client-react";
+import { AKC_ALL_BREEDS } from "@/data/akc-breeds";
 import { useUpload } from "@workspace/object-storage-web";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
@@ -25,7 +27,7 @@ interface DogFormValues {
   registeredName: string;
   callName: string;
   sex: string;
-  breedId: string;
+  breedName: string;
   dob: string;
   colour: string;
   microchip: string;
@@ -39,7 +41,7 @@ const empty: DogFormValues = {
   registeredName: "",
   callName: "",
   sex: "male",
-  breedId: "",
+  breedName: "",
   dob: "",
   colour: "",
   microchip: "",
@@ -54,7 +56,7 @@ export function dogToFormValues(dog: any): DogFormValues {
     registeredName: dog.registeredName ?? "",
     callName: dog.callName ?? "",
     sex: dog.sex ?? "male",
-    breedId: dog.breedId != null ? String(dog.breedId) : "",
+    breedName: dog.breedName ?? "",
     dob: dog.dob ?? "",
     colour: dog.colour ?? "",
     microchip: dog.microchip ?? "",
@@ -109,13 +111,11 @@ function PhotoField({ value, onChange }: { value: string; onChange: (url: string
 
 // ─── Searchable breed combobox ────────────────────────────────────────────────
 
-function BreedCombobox({ value, onChange, breeds }: {
+function BreedCombobox({ value, onChange }: {
   value: string;
   onChange: (v: string) => void;
-  breeds: { id: number; name: string; group?: string | null }[];
 }) {
   const [open, setOpen] = useState(false);
-  const selected = breeds.find(b => String(b.id) === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -123,7 +123,7 @@ function BreedCombobox({ value, onChange, breeds }: {
         <Button variant="outline" role="combobox" aria-expanded={open}
           className="w-full justify-between font-normal text-sm h-9">
           <span className="truncate text-left">
-            {selected ? selected.name : <span className="text-muted-foreground">— Unknown / Mixed —</span>}
+            {value ? value : <span className="text-muted-foreground">— Unknown / Mixed —</span>}
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50 ml-2" />
         </Button>
@@ -140,11 +140,11 @@ function BreedCombobox({ value, onChange, breeds }: {
               </CommandItem>
             </CommandGroup>
             <CommandGroup>
-              {breeds.map(b => (
-                <CommandItem key={b.id} value={b.name} onSelect={() => { onChange(String(b.id)); setOpen(false); }}>
-                  <Check className={cn("mr-2 h-3.5 w-3.5", String(b.id) === value ? "opacity-100" : "opacity-0")} />
+              {AKC_ALL_BREEDS.map(b => (
+                <CommandItem key={b.name} value={b.name} onSelect={() => { onChange(b.name); setOpen(false); }}>
+                  <Check className={cn("mr-2 h-3.5 w-3.5", b.name === value ? "opacity-100" : "opacity-0")} />
                   {b.name}
-                  {b.group && <span className="ml-auto text-xs text-muted-foreground">{b.group}</span>}
+                  <span className="ml-auto text-xs text-muted-foreground">{b.group}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -175,6 +175,8 @@ export function DogForm({
   const [form, setForm] = useState<DogFormValues>(initialValues);
   const [sireSelection, setSireSelection] = useState<ParentSelection>(initialSire ?? { mode: "none" });
   const [damSelection, setDamSelection] = useState<ParentSelection>(initialDam ?? { mode: "none" });
+  const [ownedByUser, setOwnedByUser] = useState<"yes" | "no">("yes");
+  const [addToKennel, setAddToKennel] = useState(true);
 
   const { data: breeds } = useListBreeds();
   const createDog = useCreateDog();
@@ -193,15 +195,44 @@ export function DogForm({
       return;
     }
 
-    // Build sire/dam payload from selections
-    const sirePayload = buildSirePayload(sireSelection);
-    const damPayload = buildDamPayload(damSelection);
+    // Manual parent entries require at least a registered name to create a stub record
+    if (sireSelection.mode === "manual" && !sireSelection.details.registeredName.trim()) {
+      toast({ title: "Please enter a registered name for the Sire, or clear the sire field", variant: "destructive" });
+      return;
+    }
+    if (damSelection.mode === "manual" && !damSelection.details.registeredName.trim()) {
+      toast({ title: "Please enter a registered name for the Dam, or clear the dam field", variant: "destructive" });
+      return;
+    }
 
+    // Prevent selecting the same dog as both sire and dam
+    if (sireSelection.mode === "known" && damSelection.mode === "known" && sireSelection.dogId === damSelection.dogId) {
+      toast({ title: "The same dog cannot be both Sire and Dam", variant: "destructive" });
+      return;
+    }
+
+    // Prevent a dog being its own parent in edit mode
+    if (dogId) {
+      if (sireSelection.mode === "known" && sireSelection.dogId === dogId) {
+        toast({ title: "A dog cannot be its own Sire", variant: "destructive" });
+        return;
+      }
+      if (damSelection.mode === "known" && damSelection.dogId === dogId) {
+        toast({ title: "A dog cannot be its own Dam", variant: "destructive" });
+        return;
+      }
+    }
+
+    // Build sire/dam payload from selections
+    const sirePayload = buildSirePayload(sireSelection, breedList);
+    const damPayload = buildDamPayload(damSelection, breedList);
+
+    const isOwned = ownedByUser === "yes";
     const body: any = {
       registeredName: form.registeredName.trim(),
       callName: form.callName.trim(),
       sex: form.sex,
-      breedId: form.breedId ? parseInt(form.breedId) : null,
+      breedId: form.breedName ? (breedList.find((b: any) => b.name === form.breedName)?.id ?? null) : null,
       dob: form.dob || null,
       colour: form.colour.trim() || null,
       microchip: form.microchip.trim() || null,
@@ -212,10 +243,16 @@ export function DogForm({
       ...damPayload,
     };
 
+    if (mode === "create") {
+      body.isOwned = isOwned;
+      body.addToKennel = isOwned ? addToKennel : false;
+    }
+
     try {
       if (mode === "create") {
         const result = await createDog.mutateAsync({ data: body });
-        toast({ title: "Dog added successfully" });
+        const kennelMsg = isOwned && addToKennel ? " and added to My Kennel" : "";
+        toast({ title: `Dog added successfully${kennelMsg}` });
         navigate(`/dogs/${(result as any).id}`);
       } else if (dogId) {
         const updateBody = { ...body, status: form.status };
@@ -225,8 +262,9 @@ export function DogForm({
         toast({ title: "Dog updated successfully" });
         navigate(`/dogs/${dogId}`);
       }
-    } catch {
-      toast({ title: mode === "create" ? "Failed to add dog" : "Failed to update dog", variant: "destructive" });
+    } catch (err) {
+      const description = err instanceof Error ? err.message : undefined;
+      toast({ title: mode === "create" ? "Failed to add dog" : "Failed to update dog", description, variant: "destructive" });
     }
   }
 
@@ -245,7 +283,11 @@ export function DogForm({
           {mode === "create" ? "Add New Dog" : "Edit Dog"}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          {mode === "create" ? "Add a dog to your kennel." : "Update this dog's details."}
+          {mode === "create"
+            ? ownedByUser === "yes"
+              ? addToKennel ? "Add a dog to your kennel and pedigree database." : "Add a dog you own to the pedigree database."
+              : "Add a dog to the pedigree database for registration number lookups."
+            : "Update this dog's details."}
         </p>
       </div>
 
@@ -281,7 +323,7 @@ export function DogForm({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Breed</Label>
-              <BreedCombobox value={form.breedId} onChange={v => set("breedId", v)} breeds={breedList} />
+              <BreedCombobox value={form.breedName} onChange={v => set("breedName", v)} />
             </div>
           </CardContent>
         </Card>
@@ -329,7 +371,6 @@ export function DogForm({
                 sex="male"
                 value={sireSelection}
                 onChange={setSireSelection}
-                breeds={breedList}
               />
             </div>
             <div className="space-y-2">
@@ -339,7 +380,6 @@ export function DogForm({
                 sex="female"
                 value={damSelection}
                 onChange={setDamSelection}
-                breeds={breedList}
               />
             </div>
           </CardContent>
@@ -349,17 +389,63 @@ export function DogForm({
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Settings</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Visibility <span className="text-destructive">*</span></Label>
-              <Select value={form.visibility} onValueChange={v => set("visibility", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="private">Private — kennel only</SelectItem>
-                  <SelectItem value="public">Public — visible in directory</SelectItem>
-                  <SelectItem value="stud">Stud — listed in stud directory</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
+            {/* Ownership — create mode only */}
+            {mode === "create" && (
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="text-xs">Is this dog owned by you? <span className="text-destructive">*</span></Label>
+                <Select value={ownedByUser} onValueChange={v => setOwnedByUser(v as "yes" | "no")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes">Yes — I own this dog</SelectItem>
+                    <SelectItem value="no">No — adding for pedigree record only</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {ownedByUser === "no"
+                    ? "The dog will be saved to the pedigree database and is findable by registration number, but will not appear in My Kennel."
+                    : "The dog will be saved with you as the owner."}
+                </p>
+              </div>
+            )}
+
+            {/* Add to kennel — only when owned, create mode */}
+            {mode === "create" && ownedByUser === "yes" && (
+              <div className="sm:col-span-2 rounded-lg border p-3 flex items-start gap-3">
+                <Checkbox
+                  id="add-to-kennel"
+                  checked={addToKennel}
+                  onCheckedChange={checked => setAddToKennel(checked === true)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-0.5">
+                  <label htmlFor="add-to-kennel" className="text-sm font-medium cursor-pointer select-none">
+                    Add to My Kennel
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    {addToKennel
+                      ? "This dog will appear in your My Kennel section."
+                      : "The dog will be saved to the pedigree database but hidden from My Kennel."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Visibility — only relevant when dog is in kennel */}
+            {(mode === "edit" || (ownedByUser === "yes" && addToKennel)) && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Visibility <span className="text-destructive">*</span></Label>
+                <Select value={form.visibility} onValueChange={v => set("visibility", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">Private — kennel only</SelectItem>
+                    <SelectItem value="public">Public — visible in directory</SelectItem>
+                    <SelectItem value="stud">Stud — listed in stud directory</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {mode === "edit" && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Status</Label>
@@ -393,36 +479,33 @@ export function DogForm({
 
 // ─── Helpers: convert ParentSelection to API body fields ─────────────────────
 
-function buildSirePayload(sel: ParentSelection): Record<string, unknown> {
-  if (sel.mode === "none") return { sireId: null };
-  if (sel.mode === "known") return { sireId: sel.dogId };
-  if (sel.matchedId) return { sireId: sel.matchedId };
-  const d = sel.details;
+function buildParentDetails(
+  d: import("@/components/ParentPicker").ManualParentDetails,
+  breedList: { id: number; name: string }[],
+) {
+  const matchedBreed = d.breedName ? breedList.find(b => b.name === d.breedName) : null;
   return {
-    sire: {
-      registeredName: d.registeredName.trim() || undefined,
-      registrationNumber: d.registrationNumber.trim() || undefined,
-      microchip: d.microchip.trim() || undefined,
-      sex: d.sex || undefined,
-      dob: d.dob || undefined,
-      colour: d.colour.trim() || undefined,
-    },
+    registeredName: d.registeredName.trim() || undefined,
+    callName: d.callName.trim() || undefined,
+    registrationNumber: d.registrationNumber.trim() || undefined,
+    microchip: d.microchip.trim() || undefined,
+    sex: d.sex || undefined,
+    breedId: matchedBreed?.id ?? undefined,
+    dob: d.dob || undefined,
+    colour: d.colour.trim() || undefined,
   };
 }
 
-function buildDamPayload(sel: ParentSelection): Record<string, unknown> {
+function buildSirePayload(sel: ParentSelection, breedList: { id: number; name: string }[]): Record<string, unknown> {
+  if (sel.mode === "none") return { sireId: null };
+  if (sel.mode === "known") return { sireId: sel.dogId };
+  if (sel.matchedId) return { sireId: sel.matchedId };
+  return { sire: buildParentDetails(sel.details, breedList) };
+}
+
+function buildDamPayload(sel: ParentSelection, breedList: { id: number; name: string }[]): Record<string, unknown> {
   if (sel.mode === "none") return { damId: null };
   if (sel.mode === "known") return { damId: sel.dogId };
   if (sel.matchedId) return { damId: sel.matchedId };
-  const d = sel.details;
-  return {
-    dam: {
-      registeredName: d.registeredName.trim() || undefined,
-      registrationNumber: d.registrationNumber.trim() || undefined,
-      microchip: d.microchip.trim() || undefined,
-      sex: d.sex || undefined,
-      dob: d.dob || undefined,
-      colour: d.colour.trim() || undefined,
-    },
-  };
+  return { dam: buildParentDetails(sel.details, breedList) };
 }

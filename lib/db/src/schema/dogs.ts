@@ -20,6 +20,7 @@ export const dogsTable = pgTable("dogs", {
   photoUrl: text("photo_url"),
   status: text("status").notNull().default("active"),
   isExternal: text("is_external").notNull().default("false"),
+  inKennel: text("in_kennel").notNull().default("true"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [

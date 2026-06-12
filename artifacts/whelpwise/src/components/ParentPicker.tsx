@@ -9,14 +9,17 @@ import {
 import {
   Search, Pencil, X, CheckCircle2, Loader2, Info,
 } from "lucide-react";
+import { AKC_ALL_BREEDS } from "@/data/akc-breeds";
 
 // ─── Exported types ───────────────────────────────────────────────────────────
 
 export interface ManualParentDetails {
   registeredName: string;
+  callName: string;
   registrationNumber: string;
   microchip: string;
   sex: string;
+  breedName: string;
   dob: string;
   colour: string;
 }
@@ -34,9 +37,11 @@ export type ParentSelection =
 
 const emptyManual: ManualParentDetails = {
   registeredName: "",
+  callName: "",
   registrationNumber: "",
   microchip: "",
   sex: "",
+  breedName: "",
   dob: "",
   colour: "",
 };
@@ -48,12 +53,11 @@ interface ParentPickerProps {
   sex: "male" | "female";
   value: ParentSelection;
   onChange: (v: ParentSelection) => void;
-  breeds: { id: number; name: string }[];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: ParentPickerProps) {
+export function ParentPicker({ label, sex, value, onChange }: ParentPickerProps) {
   const [ui, setUi] = useState<"idle" | "searching" | "manual">(
     value.mode === "none" ? "idle"
     : value.mode === "known" ? "idle"
@@ -67,7 +71,9 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
     value.mode === "manual" ? value.details : { ...emptyManual, sex },
   );
   const [match, setMatch] = useState<{ id: number; name: string; ancestorCount: number } | null>(
-    value.mode === "manual" && value.matchedId ? { id: value.matchedId, name: value.matchedName ?? "", ancestorCount: value.ancestorCount ?? 0 } : null,
+    value.mode === "manual" && value.matchedId
+      ? { id: value.matchedId, name: value.matchedName ?? "", ancestorCount: value.ancestorCount ?? 0 }
+      : null,
   );
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,7 +89,7 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  // Debounced search
+  // Debounced kennel search
   const doSearch = useCallback((q: string) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     if (!q.trim()) { setSearchResults([]); return; }
@@ -113,7 +119,7 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
     setSearchResults([]);
   }
 
-  // Reg number lookup on blur
+  // Registration number lookup on blur — links manual entry to an existing dog
   async function handleRegBlur() {
     const reg = manual.registrationNumber.trim();
     if (!reg) { setMatch(null); return; }
@@ -156,12 +162,14 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
   }
 
   function openManual() {
-    setManual({ ...emptyManual, sex });
+    const details = { ...emptyManual, sex };
+    setManual(details);
     setMatch(null);
     setUi("manual");
+    onChange({ mode: "manual", details });
   }
 
-  // ─── Render: already selected ────────────────────────────────────────────
+  // ─── Render: already selected (known dog from kennel) ────────────────────
   if (value.mode === "known") {
     return (
       <div className="rounded-lg border bg-muted/30 px-4 py-3 flex items-start justify-between gap-3">
@@ -170,7 +178,7 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
           <p className="font-medium text-sm truncate">{value.dogName}</p>
           {value.regNumber && <p className="text-xs text-muted-foreground font-mono">{value.regNumber}</p>}
           <Badge variant="secondary" className="text-xs mt-1 gap-1">
-            <CheckCircle2 className="h-3 w-3 text-green-600" /> From your dogs
+            <CheckCircle2 className="h-3 w-3 text-green-600" /> From your kennel
           </Badge>
         </div>
         <Button type="button" variant="ghost" size="icon" className="shrink-0 h-7 w-7" onClick={clear}>
@@ -180,6 +188,7 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
     );
   }
 
+  // ─── Render: manual entry form ───────────────────────────────────────────
   if (value.mode === "manual") {
     return (
       <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-3">
@@ -208,6 +217,7 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Registered Name */}
           <div className="sm:col-span-2 space-y-1">
             <Label className="text-xs">Registered Name <span className="text-destructive">*</span></Label>
             <Input
@@ -216,6 +226,51 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
               onChange={e => setManualField("registeredName", e.target.value)}
             />
           </div>
+
+          {/* Call Name */}
+          <div className="space-y-1">
+            <Label className="text-xs">Call Name</Label>
+            <Input
+              placeholder="e.g. Max"
+              value={manual.callName}
+              onChange={e => setManualField("callName", e.target.value)}
+            />
+          </div>
+
+          {/* Sex — pre-filled but editable */}
+          <div className="space-y-1">
+            <Label className="text-xs">Sex</Label>
+            <Select value={manual.sex || sex} onValueChange={v => setManualField("sex", v)}>
+              <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Breed — sourced from AKC static list, always populated */}
+          <div className="sm:col-span-2 space-y-1">
+            <Label className="text-xs">Breed</Label>
+            <Select
+              value={manual.breedName || "_none"}
+              onValueChange={v => setManualField("breedName", v === "_none" ? "" : v)}
+            >
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="— Unknown / Mixed —" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                <SelectItem value="_none">— Unknown / Mixed —</SelectItem>
+                {AKC_ALL_BREEDS.map(b => (
+                  <SelectItem key={b.name} value={b.name}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Registration Number — triggers kennel lookup on blur */}
           <div className="space-y-1">
             <Label className="text-xs">Registration Number</Label>
             <div className="relative">
@@ -231,6 +286,8 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
               )}
             </div>
           </div>
+
+          {/* Microchip */}
           <div className="space-y-1">
             <Label className="text-xs">Microchip</Label>
             <Input
@@ -240,20 +297,28 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
               onChange={e => setManualField("microchip", e.target.value)}
             />
           </div>
+
+          {/* Date of Birth */}
           <div className="space-y-1">
             <Label className="text-xs">Date of Birth</Label>
             <Input type="date" value={manual.dob} onChange={e => setManualField("dob", e.target.value)} />
           </div>
+
+          {/* Colour */}
           <div className="space-y-1">
             <Label className="text-xs">Colour</Label>
-            <Input placeholder="e.g. Black" value={manual.colour} onChange={e => setManualField("colour", e.target.value)} />
+            <Input
+              placeholder="e.g. Black & Tan"
+              value={manual.colour}
+              onChange={e => setManualField("colour", e.target.value)}
+            />
           </div>
         </div>
       </div>
     );
   }
 
-  // ─── Render: idle (no selection yet) ─────────────────────────────────────
+  // ─── Render: idle — no selection yet ─────────────────────────────────────
   return (
     <div className="space-y-2">
       {ui === "searching" ? (
@@ -278,7 +343,7 @@ export function ParentPicker({ label, sex, value, onChange, breeds: _breeds }: P
                 <div className="px-3 py-2 text-sm text-muted-foreground">No dogs found</div>
               ) : (
                 searchResults
-                  .filter((d: any) => sex === "male" ? d.sex === "male" : d.sex === "female")
+                  .filter((d: any) => d.sex === sex)
                   .map((d: any) => (
                     <button
                       key={d.id}

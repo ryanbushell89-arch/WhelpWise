@@ -31,11 +31,11 @@ router.use(requireAuth);
 router.use(authInvitesRouter);  // POST /invites/:token/accept
 router.use(puppyOwnerRouter);   // GET /puppy-owner/* (checks puppy_owner role internally)
 router.use(chatsRouter);        // GET+POST /chats/* (works for both breeders and owners)
+router.use(breedsRouter);       // GET /breeds — reference data, auth only
 
 // ─── Auth + active subscription required ─────────────────────────────────────
 router.use(requireSubscription);
 router.use(dashboardRouter);
-router.use(breedsRouter);
 router.use(dogsRouter);
 router.use(breedingsRouter);
 router.use(littersRouter);
