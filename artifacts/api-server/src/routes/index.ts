@@ -13,7 +13,9 @@ import storageRouter from "./storage";
 import petsRouter from "./pets";
 import waitingListRouter from "./waiting-list";
 import contractsRouter from "./contracts";
+import contractTemplatesRouter from "./contract-templates";
 import { publicInvitesRouter, authInvitesRouter, breederInvitesRouter } from "./invites";
+import signRouter from "./sign";
 import puppyOwnerRouter from "./puppy-owner";
 import chatsRouter from "./chats";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -25,6 +27,7 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(usersRouter);
 router.use(publicInvitesRouter); // GET /invites/:token — no auth needed
+router.use(signRouter);           // GET+POST /contracts/sign/:token — token auth
 
 // ─── Auth required (no subscription check) ───────────────────────────────────
 router.use(requireAuth);
@@ -46,6 +49,7 @@ router.use(storageRouter);
 router.use(petsRouter);
 router.use(waitingListRouter);
 router.use(contractsRouter);
+router.use(contractTemplatesRouter);
 router.use(breederInvitesRouter); // POST /puppies/:puppyId/invite, GET /puppies/:puppyId/invite-status
 
 export default router;

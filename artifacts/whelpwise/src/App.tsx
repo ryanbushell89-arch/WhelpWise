@@ -32,6 +32,7 @@ import NewStudListing from "@/pages/stud-directory/new";
 import BuyersDirectory from "@/pages/buyers/index";
 import BuyerDetail from "@/pages/buyers/[id]";
 import SettingsPage from "@/pages/settings/index";
+import ContractTemplatesPage from "@/pages/settings/contracts";
 import FamilyPetsDirectory from "@/pages/pets/index";
 import PetProfile from "@/pages/pets/[id]";
 import NewPet from "@/pages/pets/new";
@@ -46,6 +47,7 @@ import NewContract from "@/pages/contracts/new";
 import EditContract from "@/pages/contracts/edit";
 import SubscribePage from "@/pages/subscribe";
 import AcceptInvite from "@/pages/invite/[token]";
+import SigningPage from "@/pages/sign/[token]";
 import PuppyOwnerDashboard from "@/pages/puppy-owner/index";
 import PuppyOwnerChat from "@/pages/puppy-owner/chat";
 import BreederChats from "@/pages/breeder/chats/index";
@@ -380,6 +382,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
           <Route path="/invite/:token" component={AcceptInvite} />
+          <Route path="/sign/:token" component={SigningPage} />
           <Route path="/subscribe">
             <Show when="signed-in"><SubscribePage /></Show>
             <Show when="signed-out"><Redirect to="/sign-in" /></Show>
@@ -423,6 +426,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/stud-directory/new"><AppRoute component={NewStudListing} /></Route>
           <Route path="/buyers"><AppRoute component={BuyersDirectory} /></Route>
           <Route path="/buyers/:id"><AppRoute component={BuyerDetail} /></Route>
+          <Route path="/settings/contracts"><AppRoute component={ContractTemplatesPage} /></Route>
           <Route path="/settings"><AppRoute component={SettingsPage} /></Route>
 
           {/* Breeder chat area */}

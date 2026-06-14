@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useGetContract, useDeleteContract } from "@workspace/api-client-react";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +10,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Edit, Trash2, Printer, Download, FileText, Loader2 } from "lucide-react";
+import {
+  ArrowLeft, Edit, Trash2, Printer, Download, FileText, Loader2,
+  CheckCircle2, Clock, Eye, Send, Link2, RefreshCw, ShieldCheck,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -24,10 +28,13 @@ const TYPE_COLORS: Record<string, string> = {
   stud: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
 };
 const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  signed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  void: "bg-destructive/20 text-destructive",
+  draft:     "bg-muted text-muted-foreground",
+  sent:      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  viewed:    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  signed:    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  rejected:  "bg-destructive/20 text-destructive",
+  void:      "bg-destructive/20 text-destructive",
 };
 
 function Row({ label, value }: { label: string; value?: string | null }) {
@@ -160,6 +167,143 @@ function PrintView({ c }: { c: any }) {
         </div>
       </section>
     </div>
+  );
+}
+
+function TimelineStep({
+  icon, label, date, done, active,
+}: {
+  icon: React.ReactNode; label: string; date?: string | null; done: boolean; active: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`mt-0.5 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
+        done    ? "border-green-500 bg-green-50 text-green-600 dark:bg-green-900/30 dark:border-green-600 dark:text-green-400"
+        : active ? "border-amber-400 bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:border-amber-500 dark:text-amber-400"
+        :          "border-border bg-muted text-muted-foreground"
+      }`}>
+        {icon}
+      </div>
+      <div>
+        <p className={`text-sm font-medium leading-tight ${done ? "text-foreground" : active ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"}`}>
+          {label}
+        </p>
+        {date && <p className="text-xs text-muted-foreground mt-0.5">{date}</p>}
+        {!date && active && <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Awaiting…</p>}
+      </div>
+    </div>
+  );
+}
+
+function SigningStatusPanel({ c, contractId }: { c: any; contractId: number }) {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  const isSent     = ["sent", "viewed", "signed", "completed"].includes(c.status);
+  const isViewed   = ["viewed", "signed", "completed"].includes(c.status);
+  const isSigned   = ["signed", "completed"].includes(c.status);
+  const hasWorkflow = c.buyerAccessToken || isSent;
+
+  const resend = useMutation({
+    mutationFn: () =>
+      fetch(`/api/contracts/${contractId}/send`, { method: "POST" }).then(async r => {
+        if (!r.ok) throw new Error((await r.json()).error ?? "Failed");
+      }),
+    onSuccess: () => toast({ title: "Signing link resent" }),
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  function copyLink() {
+    if (!c.buyerAccessToken) return;
+    const url = `${window.location.origin}/sign/${c.buyerAccessToken}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  if (!hasWorkflow) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          Signing Status
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Timeline */}
+        <div className="space-y-3 pl-1">
+          <TimelineStep
+            icon={<Send className="h-3.5 w-3.5" />}
+            label="Link sent"
+            date={c.sentAt ? format(new Date(c.sentAt), "d MMM yyyy, HH:mm") : undefined}
+            done={isSent}
+            active={isSent && !isViewed}
+          />
+          <TimelineStep
+            icon={<Eye className="h-3.5 w-3.5" />}
+            label="Document viewed"
+            date={c.viewedAt ? format(new Date(c.viewedAt), "d MMM yyyy, HH:mm") : undefined}
+            done={isViewed}
+            active={isSent && !isViewed}
+          />
+          <TimelineStep
+            icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+            label="Signed"
+            date={c.signedAt ? format(new Date(c.signedAt), "d MMM yyyy, HH:mm") : undefined}
+            done={isSigned}
+            active={isViewed && !isSigned}
+          />
+        </div>
+
+        {/* Audit trail (signed only) */}
+        {isSigned && (c.signerIp || c.signerUserAgent) && (
+          <div className="border rounded-lg p-3 space-y-1.5 text-xs text-muted-foreground bg-muted/30">
+            {c.signerIp && (
+              <div className="flex gap-2">
+                <span className="font-medium w-20 flex-shrink-0">IP address</span>
+                <span className="font-mono">{c.signerIp}</span>
+              </div>
+            )}
+            {c.signerUserAgent && (
+              <div className="flex gap-2">
+                <span className="font-medium w-20 flex-shrink-0">User agent</span>
+                <span className="truncate max-w-xs" title={c.signerUserAgent}>{c.signerUserAgent}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {c.buyerAccessToken && !isSigned && (
+            <Button variant="outline" size="sm" onClick={copyLink}>
+              <Link2 className="h-3.5 w-3.5 mr-1.5" />
+              {copied ? "Copied!" : "Copy link"}
+            </Button>
+          )}
+          {isSent && !isSigned && (
+            <Button
+              variant="outline" size="sm"
+              onClick={() => resend.mutate()}
+              disabled={resend.isPending}
+            >
+              {resend.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              Resend
+            </Button>
+          )}
+          {isSigned && c.signedContractUrl && (
+            <Button variant="default" size="sm" asChild>
+              <a href={c.signedContractUrl} target="_blank" rel="noopener noreferrer">
+                <Download className="h-3.5 w-3.5 mr-1.5" />Download signed PDF
+              </a>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -376,6 +520,8 @@ export default function ContractDetail() {
               </CardContent>
             </Card>
           )}
+
+          <SigningStatusPanel c={c} contractId={contractId} />
 
           {c.notes && (
             <Card>

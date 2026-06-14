@@ -129,6 +129,16 @@ export class ObjectStorageService {
     return `/objects/${entityId}`;
   }
 
+  async uploadBuffer(buffer: Buffer, contentType: string, folder: string = "uploads"): Promise<string> {
+    const privateDir = this.getPrivateObjectDir();
+    const fileId = randomUUID();
+    const fullPath = `${privateDir}/${folder}/${fileId}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    await bucket.file(objectName).save(buffer, { contentType });
+    return `/objects/${folder}/${fileId}`;
+  }
+
   async trySetObjectEntityAclPolicy(rawPath: string, aclPolicy: ObjectAclPolicy): Promise<string> {
     const normalizedPath = this.normalizeObjectEntityPath(rawPath);
     if (!normalizedPath.startsWith("/")) return normalizedPath;

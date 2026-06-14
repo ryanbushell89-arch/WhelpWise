@@ -1,8 +1,27 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { puppiesTable } from "./puppies";
 import { studListingsTable } from "./studs";
+
+// ─── Contract Templates ───────────────────────────────────────────────────────
+export const contractTemplatesTable = pgTable("contract_templates", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  // puppy_sale_limited | puppy_sale_main | stud | custom
+  category: text("category").notNull().default("custom"),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  fileSize: integer("file_size"),
+  isActive: text("is_active").notNull().default("true"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const insertContractTemplateSchema = createInsertSchema(contractTemplatesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertContractTemplate = z.infer<typeof insertContractTemplateSchema>;
+export type ContractTemplate = typeof contractTemplatesTable.$inferSelect;
 
 // ─── Waiting List ─────────────────────────────────────────────────────────────
 export const waitingListTable = pgTable("waiting_list", {
@@ -40,8 +59,14 @@ export type WaitingListEntry = typeof waitingListTable.$inferSelect;
 // ─── Contracts ────────────────────────────────────────────────────────────────
 export const contractsTable = pgTable("contracts", {
   id: serial("id").primaryKey(),
+  userId: text("user_id"),
   type: text("type").notNull(),   // puppy_sale_limited | puppy_sale_main | stud
-  status: text("status").notNull().default("draft"), // draft | active | signed | completed
+  // draft | sent | viewed | signed | rejected | completed
+  status: text("status").notNull().default("draft"),
+
+  // Template linkage
+  templateId: integer("template_id").references(() => contractTemplatesTable.id),
+  buyerId: integer("buyer_id"),
 
   // Links
   puppyId: integer("puppy_id"),
@@ -83,9 +108,23 @@ export const contractsTable = pgTable("contracts", {
   notes: text("notes"),
   contractDate: text("contract_date"),        // YYYY-MM-DD
 
+  // Signing workflow
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  viewedAt: timestamp("viewed_at", { withTimezone: true }),
+  signatureImageUrl: text("signature_image_url"),
+  signedAt: timestamp("signed_at", { withTimezone: true }),
+  signerIp: text("signer_ip"),
+  signerUserAgent: text("signer_user_agent"),
+
+  // Secure token for buyer signing link (no account required)
+  buyerAccessToken: text("buyer_access_token"),
+  tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  uniqueIndex("idx_contracts_buyer_token").on(t.buyerAccessToken),
+]);
 
 export const insertContractSchema = createInsertSchema(contractsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertContract = z.infer<typeof insertContractSchema>;

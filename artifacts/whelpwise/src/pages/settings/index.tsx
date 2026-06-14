@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/mode-toggle";
-import { Settings, Bell, Palette, Database, Shield } from "lucide-react";
+import { Settings, Bell, Palette, Database, Shield, FileText, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 
 export default function SettingsPage() {
   return (
@@ -39,6 +40,21 @@ export default function SettingsPage() {
             </div>
           </div>
           <Button className="mt-2">Save Profile</Button>
+        </CardContent>
+      </Card>
+
+      {/* Contract Library */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><FileText className="h-4 w-4" /> Contract Library</CardTitle>
+          <CardDescription>Manage your reusable PDF contract templates for puppy sales and stud services.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/settings/contracts">
+            <Button variant="outline" className="gap-2">
+              Manage Templates <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
