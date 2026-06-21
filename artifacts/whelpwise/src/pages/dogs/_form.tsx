@@ -111,7 +111,78 @@ function buildPedigreePayload(pedigree: PedigreeState): PedigreeInput {
   return payload;
 }
 
-// ─── Ancestor input sub-component ────────────────────────────────────────────
+// ─── Pedigree form layout constants ──────────────────────────────────────────
+
+const PEDIGREE_CELL_H = 132; // px per row — fits label + 3 compact inputs
+const PEDIGREE_CONN_W = 20;  // connector column width
+const PEDIGREE_NODE_W = [136, 158, 148, 138] as const; // subject, parents, grandparents, ggp
+
+// ─── Shared reg-number lookup ─────────────────────────────────────────────────
+
+async function lookupByReg(reg: string): Promise<{ registeredName: string; colour: string; id: number } | null> {
+  try {
+    const res = await fetch(`/api/dogs/lookup-by-reg?reg=${encodeURIComponent(reg)}`);
+    if (res.ok) return res.json();
+  } catch { /* ignore */ }
+  return null;
+}
+
+// ─── Compact ancestor input cell (landscape grid) ────────────────────────────
+
+function AncestorInputCell({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: AncestorEntry;
+  onChange: (v: AncestorEntry) => void;
+}) {
+  const [looking, setLooking] = useState(false);
+
+  async function onRegBlur() {
+    const reg = value.registrationNumber.trim();
+    if (!reg || value.linkedId) return;
+    setLooking(true);
+    const found = await lookupByReg(reg);
+    if (found) onChange({ ...value, registeredName: found.registeredName ?? value.registeredName, colour: found.colour ?? value.colour, linkedId: found.id });
+    setLooking(false);
+  }
+
+  return (
+    <div className={cn(
+      "rounded-md border p-1.5 flex flex-col gap-1 h-full w-full overflow-hidden",
+      value.linkedId ? "border-green-400/50 bg-green-50/30 dark:bg-green-950/20" : "border-border/60 bg-card",
+    )}>
+      <div className="flex items-center justify-between gap-1 min-h-[14px]">
+        <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground/50 leading-none truncate">{label}</span>
+        {value.linkedId && (
+          <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 leading-none gap-0.5 shrink-0">
+            <Link2 className="h-2.5 w-2.5" />Linked
+          </Badge>
+        )}
+      </div>
+      <div className="relative">
+        <Input className="h-7 text-[11px] font-mono px-2 pr-7" placeholder="Reg #"
+          value={value.registrationNumber}
+          onChange={e => onChange({ ...value, registrationNumber: e.target.value, linkedId: undefined })}
+          onBlur={onRegBlur}
+        />
+        {looking && <Loader2 className="absolute right-1.5 top-1.5 h-4 w-4 animate-spin text-muted-foreground" />}
+      </div>
+      <Input className="h-7 text-[11px] px-2" placeholder="Registered name"
+        value={value.registeredName}
+        onChange={e => onChange({ ...value, registeredName: e.target.value })}
+      />
+      <Input className="h-7 text-[11px] px-2" placeholder="Colour"
+        value={value.colour}
+        onChange={e => onChange({ ...value, colour: e.target.value })}
+      />
+    </div>
+  );
+}
+
+// ─── Full-size ancestor input (mobile stacked layout) ────────────────────────
 
 function AncestorInput({
   label,
@@ -128,20 +199,9 @@ function AncestorInput({
     const reg = value.registrationNumber.trim();
     if (!reg || value.linkedId) return;
     setLooking(true);
-    try {
-      const res = await fetch(`/api/dogs/lookup-by-reg?reg=${encodeURIComponent(reg)}`);
-      if (res.ok) {
-        const dog = await res.json();
-        onChange({
-          ...value,
-          registeredName: dog.registeredName ?? value.registeredName,
-          colour: dog.colour ?? value.colour,
-          linkedId: dog.id,
-        });
-      }
-    } catch { /* ignore network errors */ } finally {
-      setLooking(false);
-    }
+    const found = await lookupByReg(reg);
+    if (found) onChange({ ...value, registeredName: found.registeredName ?? value.registeredName, colour: found.colour ?? value.colour, linkedId: found.id });
+    setLooking(false);
   }
 
   return (
@@ -157,9 +217,7 @@ function AncestorInput({
       <div className="space-y-1.5">
         <Label className="text-xs">Registration Number</Label>
         <div className="relative">
-          <Input
-            className="font-mono text-sm pr-8"
-            placeholder="e.g. 2100123456"
+          <Input className="font-mono text-sm pr-8" placeholder="e.g. 2100123456"
             value={value.registrationNumber}
             onChange={e => onChange({ ...value, registrationNumber: e.target.value, linkedId: undefined })}
             onBlur={onRegBlur}
@@ -169,21 +227,38 @@ function AncestorInput({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Registered Name</Label>
-        <Input
-          placeholder="e.g. Goldenridge Perfect Storm"
+        <Input placeholder="e.g. Goldenridge Perfect Storm"
           value={value.registeredName}
           onChange={e => onChange({ ...value, registeredName: e.target.value })}
         />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Colour</Label>
-        <Input
-          placeholder="e.g. Light Golden"
+        <Input placeholder="e.g. Light Golden"
           value={value.colour}
           onChange={e => onChange({ ...value, colour: e.target.value })}
         />
       </div>
     </div>
+  );
+}
+
+// ─── SVG branch connector ─────────────────────────────────────────────────────
+
+function PedigreeFormConnector({ rows }: { rows: number }) {
+  const h = rows * PEDIGREE_CELL_H;
+  const mid = h / 2;
+  const top = h / 4;
+  const bot = (h * 3) / 4;
+  const cx = PEDIGREE_CONN_W / 2;
+  return (
+    <svg width={PEDIGREE_CONN_W} height={h} viewBox={`0 0 ${PEDIGREE_CONN_W} ${h}`}
+      className="block shrink-0" style={{ color: "hsl(var(--border))" }}>
+      <line x1={0} y1={mid} x2={cx} y2={mid} stroke="currentColor" strokeWidth="1" />
+      <line x1={cx} y1={top} x2={cx} y2={bot} stroke="currentColor" strokeWidth="1" />
+      <line x1={cx} y1={top} x2={PEDIGREE_CONN_W} y2={top} stroke="currentColor" strokeWidth="1" />
+      <line x1={cx} y1={bot} x2={PEDIGREE_CONN_W} y2={bot} stroke="currentColor" strokeWidth="1" />
+    </svg>
   );
 }
 
@@ -451,48 +526,136 @@ export function DogForm({
           </CardContent>
         </Card>
 
-        {/* Pedigree — Generation 1 */}
+        {/* ── Pedigree ──────────────────────────────────────────────────────── */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Pedigree — Parents</CardTitle>
+            <CardTitle className="text-base">3-Generation Pedigree</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter a registration number and tab away to auto-link an existing record.
-              Ancestors are saved to the global pedigree database only, not your kennel.
+              Tab out of any Reg # field to auto-link an existing record.
+              Ancestors are saved to the global pedigree database only — not your kennel.
             </p>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AncestorInput label="Sire (Father)" value={pedigree.sire} onChange={v => setAncestor("sire", v)} />
-            <AncestorInput label="Dam (Mother)" value={pedigree.dam} onChange={v => setAncestor("dam", v)} />
-          </CardContent>
-        </Card>
+          <CardContent>
+            {/* ── Mobile: stacked cards ── */}
+            <div className="md:hidden space-y-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Parents</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <AncestorInput label="Sire (Father)" value={pedigree.sire} onChange={v => setAncestor("sire", v)} />
+                  <AncestorInput label="Dam (Mother)" value={pedigree.dam} onChange={v => setAncestor("dam", v)} />
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Grandparents</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <AncestorInput label="Sire's Sire" value={pedigree.sireSire} onChange={v => setAncestor("sireSire", v)} />
+                  <AncestorInput label="Sire's Dam"  value={pedigree.sireDam}  onChange={v => setAncestor("sireDam", v)} />
+                  <AncestorInput label="Dam's Sire"  value={pedigree.damSire}  onChange={v => setAncestor("damSire", v)} />
+                  <AncestorInput label="Dam's Dam"   value={pedigree.damDam}   onChange={v => setAncestor("damDam", v)} />
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Great-Grandparents</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <AncestorInput label="Sire's Sire's Sire" value={pedigree.sireSireSire} onChange={v => setAncestor("sireSireSire", v)} />
+                  <AncestorInput label="Sire's Sire's Dam"  value={pedigree.sireSireDam}  onChange={v => setAncestor("sireSireDam", v)} />
+                  <AncestorInput label="Sire's Dam's Sire"  value={pedigree.sireDamSire}  onChange={v => setAncestor("sireDamSire", v)} />
+                  <AncestorInput label="Sire's Dam's Dam"   value={pedigree.sireDamDam}   onChange={v => setAncestor("sireDamDam", v)} />
+                  <AncestorInput label="Dam's Sire's Sire"  value={pedigree.damSireSire}  onChange={v => setAncestor("damSireSire", v)} />
+                  <AncestorInput label="Dam's Sire's Dam"   value={pedigree.damSireDam}   onChange={v => setAncestor("damSireDam", v)} />
+                  <AncestorInput label="Dam's Dam's Sire"   value={pedigree.damDamSire}   onChange={v => setAncestor("damDamSire", v)} />
+                  <AncestorInput label="Dam's Dam's Dam"    value={pedigree.damDamDam}    onChange={v => setAncestor("damDamDam", v)} />
+                </div>
+              </div>
+            </div>
 
-        {/* Pedigree — Generation 2 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Pedigree — Grandparents</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AncestorInput label="Sire's Sire" value={pedigree.sireSire} onChange={v => setAncestor("sireSire", v)} />
-            <AncestorInput label="Sire's Dam" value={pedigree.sireDam} onChange={v => setAncestor("sireDam", v)} />
-            <AncestorInput label="Dam's Sire" value={pedigree.damSire} onChange={v => setAncestor("damSire", v)} />
-            <AncestorInput label="Dam's Dam" value={pedigree.damDam} onChange={v => setAncestor("damDam", v)} />
-          </CardContent>
-        </Card>
+            {/* ── Desktop: landscape pedigree grid ── */}
+            <div className="hidden md:block">
+              {/* Column headers */}
+              <div className="flex mb-1" style={{ minWidth: 620 }}>
+                {(["Subject", "Parents", "Grandparents", "Great-Grandparents"] as const).map((h, i) => (
+                  <div key={h} style={{ width: PEDIGREE_NODE_W[i], marginRight: i < 3 ? PEDIGREE_CONN_W : 0 }}>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60 pl-1">{h}</span>
+                  </div>
+                ))}
+              </div>
 
-        {/* Pedigree — Generation 3 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Pedigree — Great-Grandparents</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AncestorInput label="Sire's Sire's Sire" value={pedigree.sireSireSire} onChange={v => setAncestor("sireSireSire", v)} />
-            <AncestorInput label="Sire's Sire's Dam" value={pedigree.sireSireDam} onChange={v => setAncestor("sireSireDam", v)} />
-            <AncestorInput label="Sire's Dam's Sire" value={pedigree.sireDamSire} onChange={v => setAncestor("sireDamSire", v)} />
-            <AncestorInput label="Sire's Dam's Dam" value={pedigree.sireDamDam} onChange={v => setAncestor("sireDamDam", v)} />
-            <AncestorInput label="Dam's Sire's Sire" value={pedigree.damSireSire} onChange={v => setAncestor("damSireSire", v)} />
-            <AncestorInput label="Dam's Sire's Dam" value={pedigree.damSireDam} onChange={v => setAncestor("damSireDam", v)} />
-            <AncestorInput label="Dam's Dam's Sire" value={pedigree.damDamSire} onChange={v => setAncestor("damDamSire", v)} />
-            <AncestorInput label="Dam's Dam's Dam" value={pedigree.damDamDam} onChange={v => setAncestor("damDamDam", v)} />
+              <div className="overflow-x-auto">
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: `${PEDIGREE_NODE_W[0]}px ${PEDIGREE_CONN_W}px ${PEDIGREE_NODE_W[1]}px ${PEDIGREE_CONN_W}px ${PEDIGREE_NODE_W[2]}px ${PEDIGREE_CONN_W}px ${PEDIGREE_NODE_W[3]}px`,
+                  gridTemplateRows: `repeat(8, ${PEDIGREE_CELL_H}px)`,
+                  minWidth: 620,
+                }}>
+                  {/* Subject preview — col 1, spans all 8 rows */}
+                  <div style={{ gridColumn: 1, gridRow: "1 / 9", padding: "3px 6px 3px 0", display: "flex", alignItems: "center" }}>
+                    <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5 w-full flex flex-col gap-1.5">
+                      <div className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground/50">Subject</div>
+                      <div className="text-xs font-semibold leading-tight break-words">
+                        {form.registeredName || <span className="text-muted-foreground/40 italic text-[11px]">Enter name above</span>}
+                      </div>
+                      {form.sex && (
+                        <Badge variant={form.sex === "male" ? "default" : "secondary"} className="text-[9px] px-1 py-0 h-3.5 w-fit capitalize">
+                          {form.sex}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Subject → Parents connector */}
+                  <div style={{ gridColumn: 2, gridRow: "1 / 9" }}><PedigreeFormConnector rows={8} /></div>
+
+                  {/* Parents — col 3 */}
+                  <div style={{ gridColumn: 3, gridRow: "1 / 5", padding: "3px 6px 3px 0" }}>
+                    <AncestorInputCell label="Sire" value={pedigree.sire} onChange={v => setAncestor("sire", v)} />
+                  </div>
+                  <div style={{ gridColumn: 3, gridRow: "5 / 9", padding: "3px 6px 3px 0" }}>
+                    <AncestorInputCell label="Dam" value={pedigree.dam} onChange={v => setAncestor("dam", v)} />
+                  </div>
+
+                  {/* Sire → Grandparents connector */}
+                  <div style={{ gridColumn: 4, gridRow: "1 / 5" }}><PedigreeFormConnector rows={4} /></div>
+                  {/* Dam → Grandparents connector */}
+                  <div style={{ gridColumn: 4, gridRow: "5 / 9" }}><PedigreeFormConnector rows={4} /></div>
+
+                  {/* Grandparents — col 5 */}
+                  <div style={{ gridColumn: 5, gridRow: "1 / 3", padding: "3px 6px 3px 0" }}>
+                    <AncestorInputCell label="Sire's Sire" value={pedigree.sireSire} onChange={v => setAncestor("sireSire", v)} />
+                  </div>
+                  <div style={{ gridColumn: 5, gridRow: "3 / 5", padding: "3px 6px 3px 0" }}>
+                    <AncestorInputCell label="Sire's Dam" value={pedigree.sireDam} onChange={v => setAncestor("sireDam", v)} />
+                  </div>
+                  <div style={{ gridColumn: 5, gridRow: "5 / 7", padding: "3px 6px 3px 0" }}>
+                    <AncestorInputCell label="Dam's Sire" value={pedigree.damSire} onChange={v => setAncestor("damSire", v)} />
+                  </div>
+                  <div style={{ gridColumn: 5, gridRow: "7 / 9", padding: "3px 6px 3px 0" }}>
+                    <AncestorInputCell label="Dam's Dam" value={pedigree.damDam} onChange={v => setAncestor("damDam", v)} />
+                  </div>
+
+                  {/* Grandparents → Great-Grandparents connectors */}
+                  <div style={{ gridColumn: 6, gridRow: "1 / 3" }}><PedigreeFormConnector rows={2} /></div>
+                  <div style={{ gridColumn: 6, gridRow: "3 / 5" }}><PedigreeFormConnector rows={2} /></div>
+                  <div style={{ gridColumn: 6, gridRow: "5 / 7" }}><PedigreeFormConnector rows={2} /></div>
+                  <div style={{ gridColumn: 6, gridRow: "7 / 9" }}><PedigreeFormConnector rows={2} /></div>
+
+                  {/* Great-Grandparents — col 7 */}
+                  {([
+                    { row: 1, key: "sireSireSire" as AncestorKey, lbl: "S·S·S" },
+                    { row: 2, key: "sireSireDam"  as AncestorKey, lbl: "S·S·D" },
+                    { row: 3, key: "sireDamSire"  as AncestorKey, lbl: "S·D·S" },
+                    { row: 4, key: "sireDamDam"   as AncestorKey, lbl: "S·D·D" },
+                    { row: 5, key: "damSireSire"  as AncestorKey, lbl: "D·S·S" },
+                    { row: 6, key: "damSireDam"   as AncestorKey, lbl: "D·S·D" },
+                    { row: 7, key: "damDamSire"   as AncestorKey, lbl: "D·D·S" },
+                    { row: 8, key: "damDamDam"    as AncestorKey, lbl: "D·D·D" },
+                  ]).map(({ row, key, lbl }) => (
+                    <div key={row} style={{ gridColumn: 7, gridRow: row, padding: "3px 0" }}>
+                      <AncestorInputCell label={lbl} value={pedigree[key]} onChange={v => setAncestor(key, v)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
