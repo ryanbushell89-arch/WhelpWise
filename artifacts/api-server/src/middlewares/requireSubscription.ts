@@ -8,6 +8,11 @@ import { getStripeClient } from "../stripeClient";
 const TRIAL_DAYS = 7;
 
 export async function requireSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (process.env.DISABLE_SUBSCRIPTION_CHECK === "true") {
+    next();
+    return;
+  }
+
   const userId = (req as AuthenticatedRequest).userId;
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });

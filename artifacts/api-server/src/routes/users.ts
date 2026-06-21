@@ -21,6 +21,11 @@ async function getSubscriptionStatus(user: typeof usersTable.$inferSelect): Prom
   currentPeriodEnd: string | null;
   hasStudAddon: boolean;
 }> {
+  if (process.env.DISABLE_SUBSCRIPTION_CHECK === "true") {
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    return { subscriptionStatus: "trialing", trialEndsAt, currentPeriodEnd: null, hasStudAddon: true };
+  }
+
   let subscriptionStatus = 'none';
   let trialEndsAt: string | null = null;
   let currentPeriodEnd: string | null = null;
