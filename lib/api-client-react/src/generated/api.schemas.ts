@@ -259,8 +259,6 @@ export interface AncestorSlot {
   registeredName?: string | null;
   /** @nullable */
   registrationNumber?: string | null;
-  /** @nullable */
-  colour?: string | null;
 }
 
 /**
@@ -901,6 +899,101 @@ export interface BuyerAssignment {
   collectionDate?: string | null;
 }
 
+export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
+
+
+export const ExpenseCategory = {
+  stud_fee: 'stud_fee',
+  vet_health: 'vet_health',
+  food: 'food',
+  supplies: 'supplies',
+  advertising: 'advertising',
+  registration: 'registration',
+  travel: 'travel',
+  other: 'other',
+} as const;
+
+export interface Expense {
+  id: number;
+  /** @nullable */
+  litterId?: number | null;
+  category: ExpenseCategory;
+  /** @nullable */
+  description?: string | null;
+  amount: number;
+  date: string;
+  createdAt: string;
+}
+
+export type ExpenseInputCategory = typeof ExpenseInputCategory[keyof typeof ExpenseInputCategory];
+
+
+export const ExpenseInputCategory = {
+  stud_fee: 'stud_fee',
+  vet_health: 'vet_health',
+  food: 'food',
+  supplies: 'supplies',
+  advertising: 'advertising',
+  registration: 'registration',
+  travel: 'travel',
+  other: 'other',
+} as const;
+
+export interface ExpenseInput {
+  /** @nullable */
+  litterId?: number | null;
+  category: ExpenseInputCategory;
+  /** @nullable */
+  description?: string | null;
+  amount: number;
+  date: string;
+}
+
+export type ExpenseUpdateCategory = typeof ExpenseUpdateCategory[keyof typeof ExpenseUpdateCategory];
+
+
+export const ExpenseUpdateCategory = {
+  stud_fee: 'stud_fee',
+  vet_health: 'vet_health',
+  food: 'food',
+  supplies: 'supplies',
+  advertising: 'advertising',
+  registration: 'registration',
+  travel: 'travel',
+  other: 'other',
+} as const;
+
+export interface ExpenseUpdate {
+  /** @nullable */
+  litterId?: number | null;
+  category?: ExpenseUpdateCategory;
+  /** @nullable */
+  description?: string | null;
+  amount?: number;
+  date?: string;
+}
+
+export interface BudgetLitterSummary {
+  litterId: number;
+  label: string;
+  /** @nullable */
+  dob?: string | null;
+  status: string;
+  totalExpenses: number;
+  totalIncome: number;
+  profit: number;
+  puppyCount: number;
+}
+
+export interface BudgetSummary {
+  year: number;
+  litters: BudgetLitterSummary[];
+  generalExpenses: number;
+  totalExpenses: number;
+  totalIncome: number;
+  totalProfit: number;
+}
+
 export interface StudListing {
   id: number;
   dogId: number;
@@ -1298,6 +1391,15 @@ q: string;
 
 export type ListBreedingsParams = {
 dogId?: number;
+};
+
+export type ListExpensesParams = {
+litterId?: number;
+year?: number;
+};
+
+export type GetBudgetSummaryParams = {
+year?: number;
 };
 
 export type ListStudListingsParams = {

@@ -36,6 +36,8 @@ tags:
     description: Puppy weight tracking
   - name: buyers
     description: Buyer management
+  - name: budget
+    description: Litter expense and budget tracking
   - name: stud-listings
     description: Stud directory listings
   - name: documents
@@ -1309,6 +1311,104 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Puppy"
+
+  # ─── Budget / Expenses ───────────────────────────────────────────────────────
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [budget]
+      summary: List expenses, optionally filtered by litter or year
+      parameters:
+        - name: litterId
+          in: query
+          schema:
+            type: integer
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Expense list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [budget]
+      summary: Create an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{expenseId}:
+    patch:
+      operationId: updateExpense
+      tags: [budget]
+      summary: Update an expense
+      parameters:
+        - name: expenseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+    delete:
+      operationId: deleteExpense
+      tags: [budget]
+      summary: Delete an expense
+      parameters:
+        - name: expenseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /budget/summary:
+    get:
+      operationId: getBudgetSummary
+      tags: [budget]
+      summary: Get per-litter and yearly budget totals
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Budget summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetSummary"
 
   # ─── Stud Listings ───────────────────────────────────────────────────────────
   /stud-listings:
@@ -2961,6 +3061,118 @@ components:
         collectionDate:
           type: ["string", "null"]
       required: []
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+        litterId:
+          type: ["integer", "null"]
+        category:
+          type: string
+          enum: [stud_fee, vet_health, food, supplies, advertising, registration, travel, other]
+        description:
+          type: ["string", "null"]
+        amount:
+          type: number
+        date:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - category
+        - amount
+        - date
+        - createdAt
+
+    ExpenseInput:
+      type: object
+      properties:
+        litterId:
+          type: ["integer", "null"]
+        category:
+          type: string
+          enum: [stud_fee, vet_health, food, supplies, advertising, registration, travel, other]
+        description:
+          type: ["string", "null"]
+        amount:
+          type: number
+        date:
+          type: string
+      required:
+        - category
+        - amount
+        - date
+
+    ExpenseUpdate:
+      type: object
+      properties:
+        litterId:
+          type: ["integer", "null"]
+        category:
+          type: string
+          enum: [stud_fee, vet_health, food, supplies, advertising, registration, travel, other]
+        description:
+          type: ["string", "null"]
+        amount:
+          type: number
+        date:
+          type: string
+
+    BudgetLitterSummary:
+      type: object
+      properties:
+        litterId:
+          type: integer
+        label:
+          type: string
+        dob:
+          type: ["string", "null"]
+        status:
+          type: string
+        totalExpenses:
+          type: number
+        totalIncome:
+          type: number
+        profit:
+          type: number
+        puppyCount:
+          type: integer
+      required:
+        - litterId
+        - label
+        - status
+        - totalExpenses
+        - totalIncome
+        - profit
+        - puppyCount
+
+    BudgetSummary:
+      type: object
+      properties:
+        year:
+          type: integer
+        litters:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetLitterSummary"
+        generalExpenses:
+          type: number
+        totalExpenses:
+          type: number
+        totalIncome:
+          type: number
+        totalProfit:
+          type: number
+      required:
+        - year
+        - litters
+        - generalExpenses
+        - totalExpenses
+        - totalIncome
+        - totalProfit
 
     StudListing:
       type: object

@@ -19,6 +19,7 @@ import {
   FileText,
   AlertCircle,
   MessageCircle,
+  PiggyBank,
 } from "lucide-react";
 
 interface SidebarLayoutProps {
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/breedings", label: "Breedings", icon: HeartPulse },
   { href: "/waiting-list", label: "Waiting List", icon: ClipboardList },
   { href: "/buyers", label: "Buyers", icon: Users },
+  { href: "/budget", label: "Budgeting", icon: PiggyBank },
   { href: "/contracts", label: "Contracts", icon: FileText },
   { href: "/stud-directory", label: "Stud Directory", icon: Search },
   { href: "/breeder/chats", label: "Owner Chats", icon: MessageCircle },

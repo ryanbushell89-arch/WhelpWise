@@ -294,73 +294,59 @@ export const SavePedigreeParams = zod.object({
 export const SavePedigreeBody = zod.object({
   "sire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "dam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireSireSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireSireDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireDamSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "sireDamDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damSireSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damSireDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damDamSire": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor'),
   "damDamDam": zod.object({
   "registeredName": zod.string().nullish(),
-  "registrationNumber": zod.string().nullish(),
-  "colour": zod.string().nullish()
+  "registrationNumber": zod.string().nullish()
 }).optional().describe('A single ancestor slot in the pedigree editor')
 }).describe('Full 3-generation pedigree — all slots are optional')
 
@@ -1350,6 +1336,98 @@ export const AssignBuyerResponse = zod.object({
   "depositPaid": zod.boolean().nullish(),
   "collectionDate": zod.string().nullish(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List expenses, optionally filtered by litter or year
+ */
+export const ListExpensesQueryParams = zod.object({
+  "litterId": zod.coerce.number().optional(),
+  "year": zod.coerce.number().optional()
+})
+
+export const ListExpensesResponseItem = zod.object({
+  "id": zod.number(),
+  "litterId": zod.number().nullish(),
+  "category": zod.enum(['stud_fee', 'vet_health', 'food', 'supplies', 'advertising', 'registration', 'travel', 'other']),
+  "description": zod.string().nullish(),
+  "amount": zod.number(),
+  "date": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListExpensesResponse = zod.array(ListExpensesResponseItem)
+
+
+/**
+ * @summary Create an expense
+ */
+export const CreateExpenseBody = zod.object({
+  "litterId": zod.number().nullish(),
+  "category": zod.enum(['stud_fee', 'vet_health', 'food', 'supplies', 'advertising', 'registration', 'travel', 'other']),
+  "description": zod.string().nullish(),
+  "amount": zod.number(),
+  "date": zod.string()
+})
+
+
+/**
+ * @summary Update an expense
+ */
+export const UpdateExpenseParams = zod.object({
+  "expenseId": zod.coerce.number()
+})
+
+export const UpdateExpenseBody = zod.object({
+  "litterId": zod.number().nullish(),
+  "category": zod.enum(['stud_fee', 'vet_health', 'food', 'supplies', 'advertising', 'registration', 'travel', 'other']).optional(),
+  "description": zod.string().nullish(),
+  "amount": zod.number().optional(),
+  "date": zod.string().optional()
+})
+
+export const UpdateExpenseResponse = zod.object({
+  "id": zod.number(),
+  "litterId": zod.number().nullish(),
+  "category": zod.enum(['stud_fee', 'vet_health', 'food', 'supplies', 'advertising', 'registration', 'travel', 'other']),
+  "description": zod.string().nullish(),
+  "amount": zod.number(),
+  "date": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete an expense
+ */
+export const DeleteExpenseParams = zod.object({
+  "expenseId": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get per-litter and yearly budget totals
+ */
+export const GetBudgetSummaryQueryParams = zod.object({
+  "year": zod.coerce.number().optional()
+})
+
+export const GetBudgetSummaryResponse = zod.object({
+  "year": zod.number(),
+  "litters": zod.array(zod.object({
+  "litterId": zod.number(),
+  "label": zod.string(),
+  "dob": zod.string().nullish(),
+  "status": zod.string(),
+  "totalExpenses": zod.number(),
+  "totalIncome": zod.number(),
+  "profit": zod.number(),
+  "puppyCount": zod.number()
+})),
+  "generalExpenses": zod.number(),
+  "totalExpenses": zod.number(),
+  "totalIncome": zod.number(),
+  "totalProfit": zod.number()
 })
 
 

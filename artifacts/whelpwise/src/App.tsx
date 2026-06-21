@@ -31,6 +31,7 @@ import StudDirectory from "@/pages/stud-directory/index";
 import NewStudListing from "@/pages/stud-directory/new";
 import BuyersDirectory from "@/pages/buyers/index";
 import BuyerDetail from "@/pages/buyers/[id]";
+import BudgetPage from "@/pages/budget/index";
 import SettingsPage from "@/pages/settings/index";
 import ContractTemplatesPage from "@/pages/settings/contracts";
 import FamilyPetsDirectory from "@/pages/pets/index";
@@ -426,6 +427,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/stud-directory/new"><AppRoute component={NewStudListing} /></Route>
           <Route path="/buyers"><AppRoute component={BuyersDirectory} /></Route>
           <Route path="/buyers/:id"><AppRoute component={BuyerDetail} /></Route>
+          <Route path="/budget"><AppRoute component={BudgetPage} /></Route>
           <Route path="/settings/contracts"><AppRoute component={ContractTemplatesPage} /></Route>
           <Route path="/settings"><AppRoute component={SettingsPage} /></Route>
 
