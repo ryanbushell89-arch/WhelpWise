@@ -6,7 +6,7 @@ import {
   useListWorming, useCreateWorming, useDeleteWorming,
   useListVaccinations, useCreateVaccination, useDeleteVaccination,
   useListPuppyDocuments, useCreatePuppyDocument, useDeletePuppyDocument,
-  useDeletePuppy, useUpdatePuppy,
+  useDeletePuppy, useUpdatePuppy, useListBuyers, useAssignBuyer,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, AlertTriangle, Plus, TrendingUp, TrendingDown, FileText,
   Syringe, Bug, Trash2, Upload, ExternalLink, Printer, CheckCircle2, Camera, Dog as DogIcon,
-  UserPlus, Copy, Mail, Loader2, PiggyBank, Pencil,
+  UserPlus, Copy, Mail, Loader2, PiggyBank, Pencil, Users, X,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -63,6 +63,7 @@ export default function PuppyProfile() {
   const { data: worming, refetch: refetchWorming } = useListWorming(puppyId);
   const { data: vaccinations, refetch: refetchVaccinations } = useListVaccinations(puppyId);
   const { data: documents, refetch: refetchDocs } = useListPuppyDocuments(puppyId);
+  const { data: buyers } = useListBuyers();
 
   const createWeight = useCreateWeight();
   const createWorming = useCreateWorming();
@@ -73,6 +74,7 @@ export default function PuppyProfile() {
   const deleteDoc = useDeletePuppyDocument();
   const deletePuppy = useDeletePuppy();
   const updatePuppy = useUpdatePuppy();
+  const assignBuyer = useAssignBuyer();
 
   const inviteMutation = useMutation({
     mutationFn: async (email?: string) => {
@@ -146,8 +148,49 @@ export default function PuppyProfile() {
     balanceAmount: "", balancePaid: false, saleDate: "",
   });
 
+  // Buyer assignment form
+  const [showBuyerForm, setShowBuyerForm] = useState(false);
+  const [buyerForm, setBuyerForm] = useState({ buyerId: "", collectionDate: "" });
+
   if (isLoading) return <div className="p-8"><Skeleton className="h-48 w-full rounded-xl" /></div>;
   if (!puppy) return <div className="p-8 text-muted-foreground">Puppy not found.</div>;
+
+  function openBuyerForm() {
+    const p = puppy as any;
+    setBuyerForm({
+      buyerId: p.buyerId != null ? String(p.buyerId) : "",
+      collectionDate: p.collectionDate ?? "",
+    });
+    setShowBuyerForm(true);
+  }
+
+  async function saveBuyer() {
+    if (!buyerForm.buyerId) {
+      toast({ title: "Select a buyer", variant: "destructive" });
+      return;
+    }
+    try {
+      await assignBuyer.mutateAsync({
+        puppyId,
+        data: { buyerId: parseInt(buyerForm.buyerId, 10), collectionDate: buyerForm.collectionDate || null },
+      });
+      await refetchPuppy();
+      setShowBuyerForm(false);
+      toast({ title: "Buyer assigned" });
+    } catch {
+      toast({ title: "Error assigning buyer", variant: "destructive" });
+    }
+  }
+
+  async function unassignBuyer() {
+    try {
+      await assignBuyer.mutateAsync({ puppyId, data: { buyerId: null, collectionDate: null } });
+      await refetchPuppy();
+      toast({ title: "Buyer unassigned" });
+    } catch {
+      toast({ title: "Error unassigning buyer", variant: "destructive" });
+    }
+  }
 
   function openSaleForm() {
     const p = puppy as any;
@@ -376,9 +419,72 @@ export default function PuppyProfile() {
             <CardContent className="space-y-2 text-sm">
               {(puppy as any).birthTime && <Row label="Birth Time" value={(puppy as any).birthTime} />}
               {(puppy as any).markings && <Row label="Markings" value={(puppy as any).markings} />}
-              {(puppy as any).buyerName && <Row label="Reserved By" value={(puppy as any).buyerName} />}
-              {(puppy as any).collectionDate && <Row label="Collection Date" value={format(new Date((puppy as any).collectionDate), "d MMM yyyy")} />}
               {(puppy as any).notes && <div className="mt-2 text-muted-foreground pt-2 border-t">{(puppy as any).notes}</div>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-4 w-4 text-primary" /> Buyer
+              </CardTitle>
+              {!showBuyerForm && (
+                <Button size="sm" variant="outline" onClick={openBuyerForm}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> {(puppy as any).buyerId ? "Change" : "Reserve"}
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {showBuyerForm ? (
+                <div className="space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Buyer</Label>
+                      <Select value={buyerForm.buyerId} onValueChange={v => setBuyerForm(f => ({ ...f, buyerId: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select a buyer…" /></SelectTrigger>
+                        <SelectContent>
+                          {((buyers as any[]) ?? []).map(b => (
+                            <SelectItem key={b.id} value={String(b.id)}>{b.firstName} {b.lastName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {(!buyers || (buyers as any[]).length === 0) && (
+                        <p className="text-xs text-muted-foreground">
+                          No buyers yet — <Link href="/buyers/new" className="text-primary hover:underline">add one</Link>.
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Collection Date</Label>
+                      <Input type="date" value={buyerForm.collectionDate}
+                        onChange={e => setBuyerForm(f => ({ ...f, collectionDate: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setShowBuyerForm(false)}>Cancel</Button>
+                    <Button size="sm" onClick={saveBuyer} disabled={assignBuyer.isPending}>Save</Button>
+                  </div>
+                </div>
+              ) : (puppy as any).buyerName ? (
+                <>
+                  <Row label="Reserved By" value={
+                    <Link href={`/buyers/${(puppy as any).buyerId}`} className="text-primary hover:underline">
+                      {(puppy as any).buyerName}
+                    </Link>
+                  } />
+                  {(puppy as any).collectionDate && (
+                    <Row label="Collection Date" value={format(new Date((puppy as any).collectionDate), "d MMM yyyy")} />
+                  )}
+                  <div className="flex justify-end pt-1">
+                    <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive h-7 text-xs"
+                      onClick={unassignBuyer} disabled={assignBuyer.isPending}>
+                      <X className="h-3 w-3 mr-1" /> Unassign
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground italic">Not yet reserved.</p>
+              )}
             </CardContent>
           </Card>
 
