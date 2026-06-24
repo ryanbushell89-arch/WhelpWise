@@ -1307,6 +1307,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Buyer"
+    delete:
+      operationId: deleteBuyer
+      tags: [buyers]
+      summary: Delete a buyer
+      parameters:
+        - name: buyerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   /puppies/{puppyId}/buyer:
     put:

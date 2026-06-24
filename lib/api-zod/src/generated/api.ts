@@ -1344,6 +1344,14 @@ export const UpdateBuyerResponse = zod.object({
 
 
 /**
+ * @summary Delete a buyer
+ */
+export const DeleteBuyerParams = zod.object({
+  "buyerId": zod.coerce.number()
+})
+
+
+/**
  * @summary Assign a buyer to a puppy
  */
 export const AssignBuyerParams = zod.object({

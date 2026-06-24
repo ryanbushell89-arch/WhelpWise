@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGetBuyer, useListPuppiesByBuyer } from "@workspace/api-client-react";
+import { useGetBuyer, useListPuppiesByBuyer, useDeleteBuyer } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, CheckCircle2, XCircle, Mail, Phone, MapPin, FileText, Send, Clock, Eye, Pen, AlertCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Mail, Phone, MapPin, FileText, Send, Clock, Eye, Pen, AlertCircle, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -307,9 +307,23 @@ function BuyerContracts({ buyerId, buyerEmail }: { buyerId: number; buyerEmail: 
 
 export default function BuyerDetail() {
   const [, params] = useRoute("/buyers/:id");
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const buyerId = parseInt(params?.id ?? "0", 10);
   const { data: buyer, isLoading } = useGetBuyer(buyerId);
   const { data: puppies } = useListPuppiesByBuyer({ buyerId }, { query: { enabled: !!buyerId, queryKey: ["puppies", "by-buyer", buyerId] } });
+  const deleteBuyer = useDeleteBuyer();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleDelete() {
+    try {
+      await deleteBuyer.mutateAsync({ buyerId });
+      navigate("/buyers");
+      toast({ title: "Buyer deleted" });
+    } catch {
+      toast({ title: "Error deleting buyer", variant: "destructive" });
+    }
+  }
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-48 w-full rounded-xl" /></div>;
   if (!buyer) return <div className="p-8 text-muted-foreground">Buyer not found.</div>;
@@ -339,6 +353,27 @@ export default function BuyerDetail() {
             )}
           </div>
         </div>
+
+        {confirmDelete ? (
+          <div className="flex items-center gap-1.5 border border-destructive/40 rounded-md px-2 py-1 bg-destructive/5">
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+            <span className="text-xs text-destructive font-medium">Delete this buyer?</span>
+            <Button size="sm" variant="destructive" className="h-7 text-xs px-2 ml-1"
+              disabled={deleteBuyer.isPending} onClick={handleDelete}>
+              Yes, delete
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 text-xs px-2"
+              onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button size="sm" variant="ghost"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="h-4 w-4 mr-1" /> Delete Buyer
+          </Button>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-6">

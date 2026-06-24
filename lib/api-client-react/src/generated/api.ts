@@ -4669,6 +4669,76 @@ export const useUpdateBuyer = <TError = ErrorType<unknown>,
       return useMutation(getUpdateBuyerMutationOptions(options));
     }
 
+export const getDeleteBuyerUrl = (buyerId: number,) => {
+
+
+
+
+  return `/api/buyers/${buyerId}`
+}
+
+/**
+ * @summary Delete a buyer
+ */
+export const deleteBuyer = async (buyerId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteBuyerUrl(buyerId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteBuyerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBuyer>>, TError,{buyerId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBuyer>>, TError,{buyerId: number}, TContext> => {
+
+const mutationKey = ['deleteBuyer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBuyer>>, {buyerId: number}> = (props) => {
+          const {buyerId} = props ?? {};
+
+          return  deleteBuyer(buyerId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBuyerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBuyer>>>
+
+    export type DeleteBuyerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a buyer
+ */
+export const useDeleteBuyer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBuyer>>, TError,{buyerId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBuyer>>,
+        TError,
+        {buyerId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteBuyerMutationOptions(options));
+    }
+
 export const getAssignBuyerUrl = (puppyId: number,) => {
 
 
