@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGetBuyer } from "@workspace/api-client-react";
+import { useGetBuyer, useListPuppiesByBuyer } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -309,6 +309,7 @@ export default function BuyerDetail() {
   const [, params] = useRoute("/buyers/:id");
   const buyerId = parseInt(params?.id ?? "0", 10);
   const { data: buyer, isLoading } = useGetBuyer(buyerId);
+  const { data: puppies } = useListPuppiesByBuyer({ buyerId }, { query: { enabled: !!buyerId, queryKey: ["puppies", "by-buyer", buyerId] } });
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-48 w-full rounded-xl" /></div>;
   if (!buyer) return <div className="p-8 text-muted-foreground">Buyer not found.</div>;
@@ -342,10 +343,24 @@ export default function BuyerDetail() {
 
       <div className="grid sm:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">Payment Status</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Puppies & Payment Status</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <StatusBadge done={buyer.depositPaid ?? false} label={`Deposit (${buyer.depositAmount ? `$${buyer.depositAmount}` : "N/A"})`} />
-            <StatusBadge done={buyer.balancePaid ?? false} label={`Balance (${buyer.balanceAmount ? `$${buyer.balanceAmount}` : "N/A"})`} />
+            {!puppies || (puppies as any[]).length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No puppies linked to this buyer yet.</p>
+            ) : (
+              (puppies as any[]).map(p => (
+                <div key={p.id} className="space-y-2 pb-3 border-b last:border-0 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <Link href={`/puppies/${p.id}`} className="text-sm font-medium hover:text-primary transition-colors">
+                      {p.callName ?? p.name ?? `Puppy ${p.id}`}
+                    </Link>
+                    {p.salePrice != null && <span className="text-sm font-medium">${p.salePrice.toFixed(2)}</span>}
+                  </div>
+                  <StatusBadge done={p.depositPaid} label={`Deposit${p.depositAmount ? ` ($${p.depositAmount})` : ""}`} />
+                  <StatusBadge done={p.balancePaid} label={`Balance${p.balanceAmount ? ` ($${p.balanceAmount})` : ""}`} />
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 

@@ -884,8 +884,13 @@ export const ListPuppiesResponseItem = zod.object({
   "notes": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
   "buyerName": zod.string().nullish(),
-  "depositPaid": zod.boolean().nullish(),
   "collectionDate": zod.string().nullish(),
+  "salePrice": zod.number().nullish(),
+  "depositAmount": zod.number().nullish(),
+  "depositPaid": zod.boolean(),
+  "balanceAmount": zod.number().nullish(),
+  "balancePaid": zod.boolean(),
+  "saleDate": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListPuppiesResponse = zod.array(ListPuppiesResponseItem)
@@ -914,6 +919,43 @@ export const CreatePuppyBody = zod.object({
 
 
 /**
+ * @summary List puppies, filtered by buyer
+ */
+export const ListPuppiesByBuyerQueryParams = zod.object({
+  "buyerId": zod.coerce.number()
+})
+
+export const ListPuppiesByBuyerResponseItem = zod.object({
+  "id": zod.number(),
+  "litterId": zod.number(),
+  "name": zod.string().nullish(),
+  "callName": zod.string().nullish(),
+  "registeredName": zod.string().nullish(),
+  "collarColour": zod.string().nullish(),
+  "sex": zod.enum(['male', 'female']),
+  "colour": zod.string().nullish(),
+  "markings": zod.string().nullish(),
+  "birthWeight": zod.number().nullish(),
+  "birthTime": zod.string().nullish(),
+  "placentaPresent": zod.boolean().nullish(),
+  "alive": zod.boolean(),
+  "photoUrl": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "buyerId": zod.number().nullish(),
+  "buyerName": zod.string().nullish(),
+  "collectionDate": zod.string().nullish(),
+  "salePrice": zod.number().nullish(),
+  "depositAmount": zod.number().nullish(),
+  "depositPaid": zod.boolean(),
+  "balanceAmount": zod.number().nullish(),
+  "balancePaid": zod.boolean(),
+  "saleDate": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListPuppiesByBuyerResponse = zod.array(ListPuppiesByBuyerResponseItem)
+
+
+/**
  * @summary Get a puppy
  */
 export const GetPuppyParams = zod.object({
@@ -938,8 +980,13 @@ export const GetPuppyResponse = zod.object({
   "notes": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
   "buyerName": zod.string().nullish(),
-  "depositPaid": zod.boolean().nullish(),
   "collectionDate": zod.string().nullish(),
+  "salePrice": zod.number().nullish(),
+  "depositAmount": zod.number().nullish(),
+  "depositPaid": zod.boolean(),
+  "balanceAmount": zod.number().nullish(),
+  "balancePaid": zod.boolean(),
+  "saleDate": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -973,7 +1020,13 @@ export const UpdatePuppyBody = zod.object({
   "alive": zod.boolean().optional(),
   "photoUrl": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "collectionDate": zod.string().nullish()
+  "collectionDate": zod.string().nullish(),
+  "salePrice": zod.number().nullish(),
+  "depositAmount": zod.number().nullish(),
+  "depositPaid": zod.boolean().optional(),
+  "balanceAmount": zod.number().nullish(),
+  "balancePaid": zod.boolean().optional(),
+  "saleDate": zod.string().nullish()
 })
 
 export const UpdatePuppyResponse = zod.object({
@@ -994,8 +1047,13 @@ export const UpdatePuppyResponse = zod.object({
   "notes": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
   "buyerName": zod.string().nullish(),
-  "depositPaid": zod.boolean().nullish(),
   "collectionDate": zod.string().nullish(),
+  "salePrice": zod.number().nullish(),
+  "depositAmount": zod.number().nullish(),
+  "depositPaid": zod.boolean(),
+  "balanceAmount": zod.number().nullish(),
+  "balancePaid": zod.boolean(),
+  "saleDate": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -1215,10 +1273,6 @@ export const ListBuyersResponseItem = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
-  "depositAmount": zod.number().nullish(),
-  "depositPaid": zod.boolean(),
-  "balanceAmount": zod.number().nullish(),
-  "balancePaid": zod.boolean(),
   "contractSigned": zod.boolean(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1235,8 +1289,6 @@ export const CreateBuyerBody = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
-  "depositAmount": zod.number().nullish(),
-  "balanceAmount": zod.number().nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -1255,10 +1307,6 @@ export const GetBuyerResponse = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
-  "depositAmount": zod.number().nullish(),
-  "depositPaid": zod.boolean(),
-  "balanceAmount": zod.number().nullish(),
-  "balancePaid": zod.boolean(),
   "contractSigned": zod.boolean(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1278,10 +1326,6 @@ export const UpdateBuyerBody = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
-  "depositAmount": zod.number().nullish(),
-  "depositPaid": zod.boolean().optional(),
-  "balanceAmount": zod.number().nullish(),
-  "balancePaid": zod.boolean().optional(),
   "contractSigned": zod.boolean().optional(),
   "notes": zod.string().nullish()
 })
@@ -1293,10 +1337,6 @@ export const UpdateBuyerResponse = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().nullish(),
   "address": zod.string().nullish(),
-  "depositAmount": zod.number().nullish(),
-  "depositPaid": zod.boolean(),
-  "balanceAmount": zod.number().nullish(),
-  "balancePaid": zod.boolean(),
   "contractSigned": zod.boolean(),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
@@ -1333,8 +1373,13 @@ export const AssignBuyerResponse = zod.object({
   "notes": zod.string().nullish(),
   "buyerId": zod.number().nullish(),
   "buyerName": zod.string().nullish(),
-  "depositPaid": zod.boolean().nullish(),
   "collectionDate": zod.string().nullish(),
+  "salePrice": zod.number().nullish(),
+  "depositAmount": zod.number().nullish(),
+  "depositPaid": zod.boolean(),
+  "balanceAmount": zod.number().nullish(),
+  "balancePaid": zod.boolean(),
+  "saleDate": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -1421,12 +1466,14 @@ export const GetBudgetSummaryResponse = zod.object({
   "status": zod.string(),
   "totalExpenses": zod.number(),
   "totalIncome": zod.number(),
+  "totalPledged": zod.number(),
   "profit": zod.number(),
   "puppyCount": zod.number()
 })),
   "generalExpenses": zod.number(),
   "totalExpenses": zod.number(),
   "totalIncome": zod.number(),
+  "totalPledged": zod.number().optional(),
   "totalProfit": zod.number()
 })
 

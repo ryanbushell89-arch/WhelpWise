@@ -852,6 +852,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/Puppy"
 
+  /puppies:
+    get:
+      operationId: listPuppiesByBuyer
+      tags: [puppies]
+      summary: List puppies, filtered by buyer
+      parameters:
+        - name: buyerId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Puppies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Puppy"
+
   /puppies/{puppyId}:
     get:
       operationId: getPuppy
@@ -2724,9 +2745,19 @@ components:
           type: ["integer", "null"]
         buyerName:
           type: ["string", "null"]
-        depositPaid:
-          type: ["boolean", "null"]
         collectionDate:
+          type: ["string", "null"]
+        salePrice:
+          type: ["number", "null"]
+        depositAmount:
+          type: ["number", "null"]
+        depositPaid:
+          type: boolean
+        balanceAmount:
+          type: ["number", "null"]
+        balancePaid:
+          type: boolean
+        saleDate:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -2735,6 +2766,8 @@ components:
         - litterId
         - sex
         - alive
+        - depositPaid
+        - balancePaid
         - createdAt
 
     PuppyInput:
@@ -2798,6 +2831,18 @@ components:
         notes:
           type: ["string", "null"]
         collectionDate:
+          type: ["string", "null"]
+        salePrice:
+          type: ["number", "null"]
+        depositAmount:
+          type: ["number", "null"]
+        depositPaid:
+          type: boolean
+        balanceAmount:
+          type: ["number", "null"]
+        balancePaid:
+          type: boolean
+        saleDate:
           type: ["string", "null"]
 
     WeightEntry:
@@ -2981,14 +3026,6 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
-        depositAmount:
-          type: ["number", "null"]
-        depositPaid:
-          type: boolean
-        balanceAmount:
-          type: ["number", "null"]
-        balancePaid:
-          type: boolean
         contractSigned:
           type: boolean
         notes:
@@ -2999,8 +3036,6 @@ components:
         - id
         - firstName
         - lastName
-        - depositPaid
-        - balancePaid
         - contractSigned
         - createdAt
 
@@ -3017,10 +3052,6 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
-        depositAmount:
-          type: ["number", "null"]
-        balanceAmount:
-          type: ["number", "null"]
         notes:
           type: ["string", "null"]
       required:
@@ -3040,14 +3071,6 @@ components:
           type: ["string", "null"]
         address:
           type: ["string", "null"]
-        depositAmount:
-          type: ["number", "null"]
-        depositPaid:
-          type: boolean
-        balanceAmount:
-          type: ["number", "null"]
-        balancePaid:
-          type: boolean
         contractSigned:
           type: boolean
         notes:
@@ -3136,6 +3159,8 @@ components:
           type: number
         totalIncome:
           type: number
+        totalPledged:
+          type: number
         profit:
           type: number
         puppyCount:
@@ -3146,6 +3171,7 @@ components:
         - status
         - totalExpenses
         - totalIncome
+        - totalPledged
         - profit
         - puppyCount
 
@@ -3163,6 +3189,8 @@ components:
         totalExpenses:
           type: number
         totalIncome:
+          type: number
+        totalPledged:
           type: number
         totalProfit:
           type: number

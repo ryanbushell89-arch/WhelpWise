@@ -16,9 +16,5 @@ export interface BuyerInput {
   /** @nullable */
   address?: string | null;
   /** @nullable */
-  depositAmount?: number | null;
-  /** @nullable */
-  balanceAmount?: number | null;
-  /** @nullable */
   notes?: string | null;
 }

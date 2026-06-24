@@ -98,6 +98,43 @@ function InlineEdit({
   );
 }
 
+function DobEditRow({ dob, onSave }: { dob: string | null | undefined; onSave: (v: string) => Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function startEdit() { setDraft(dob ?? ""); setEditing(true); }
+  async function save() {
+    setSaving(true);
+    try { await onSave(draft); setEditing(false); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="flex justify-between gap-4 items-center">
+      <span className="text-muted-foreground">Date of Birth</span>
+      {editing ? (
+        <div className="flex items-center gap-1">
+          <Input type="date" autoFocus value={draft} onChange={e => setDraft(e.target.value)} className="h-7 text-sm" />
+          <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={save} disabled={saving}>
+            <Check className="h-3 w-3" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(false)}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      ) : (
+        <button onClick={startEdit} className="group flex items-center gap-1 font-medium hover:text-foreground transition-colors">
+          <span className={dob ? "" : "italic text-muted-foreground/60"}>
+            {dob ? format(new Date(dob), "d MMM yyyy") : "Click to set…"}
+          </span>
+          <Pencil className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function LitterDetail() {
   const [, params] = useRoute("/litters/:id");
   const litterId = parseInt(params?.id ?? "0", 10);
@@ -129,6 +166,14 @@ export default function LitterDetail() {
       await refetchLitter();
       toast({ title: "Photo updated" });
     } catch { toast({ title: "Error updating photo", variant: "destructive" }); }
+  }
+
+  async function handleDobSave(dob: string) {
+    try {
+      await updateLitter.mutateAsync({ litterId, data: { dob: dob || null } as any });
+      await refetchLitter();
+      toast({ title: "Date of birth updated" });
+    } catch { toast({ title: "Error updating date of birth", variant: "destructive" }); }
   }
 
   // Delete confirm state
@@ -168,12 +213,17 @@ export default function LitterDetail() {
   });
 
   // Whelping form state
-  const [whelpForm, setWhelpForm] = useState({ startTime: "", endTime: "", complications: "", notes: "" });
+  const [whelpForm, setWhelpForm] = useState({ date: "", startTime: "", endTime: "", complications: "", notes: "" });
   const [showWhelpForm, setShowWhelpForm] = useState(false);
 
   // Document form state
   const [docForm, setDocForm] = useState({ name: "", fileUrl: "" });
   const [showDocForm, setShowDocForm] = useState(false);
+
+  function openWhelpForm() {
+    setWhelpForm(f => ({ ...f, date: litter?.dob ?? "" }));
+    setShowWhelpForm(true);
+  }
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-48 w-full rounded-xl" /></div>;
   if (!litter) return <div className="p-8 text-muted-foreground">Litter not found.</div>;
@@ -202,8 +252,8 @@ export default function LitterDetail() {
   }
 
   async function saveWhelping() {
-    if (!whelpForm.startTime && !whelpForm.endTime && !whelpForm.notes && !whelpForm.complications) {
-      toast({ title: "Please fill in at least one field", variant: "destructive" });
+    if (!whelpForm.date) {
+      toast({ title: "Date of birth is required", variant: "destructive" });
       return;
     }
     try {
@@ -216,6 +266,7 @@ export default function LitterDetail() {
           notes: whelpForm.notes || null,
         } as any,
       });
+      await updateLitter.mutateAsync({ litterId, data: { dob: whelpForm.date } as any });
       await refetchWhelping();
       await refetchLitter();
       setShowWhelpForm(false);
@@ -269,7 +320,7 @@ export default function LitterDetail() {
             onClick={() => window.open(`/api/litters/${litterId}/report`, "_blank")}>
             <FileDown className="h-4 w-4 mr-1" /> PDF Report
           </Button>
-          <Button size="sm" onClick={() => { setTab("whelping"); setShowWhelpForm(true); }}>
+          <Button size="sm" onClick={() => { setTab("whelping"); openWhelpForm(); }}>
             <ClipboardList className="h-4 w-4 mr-1" /> Log Whelping
           </Button>
           {confirmDeleteLitter ? (
@@ -315,7 +366,7 @@ export default function LitterDetail() {
             <CardContent className="space-y-3 text-sm">
               <Row label="Dam" value={litter.damName} />
               <Row label="Sire" value={litter.sireName} />
-              <Row label="Date of Birth" value={litter.dob ? format(new Date(litter.dob), "d MMM yyyy") : null} />
+              <DobEditRow dob={litter.dob} onSave={handleDobSave} />
               <Row label="Total Born" value={litter.totalBorn} />
               <Row label="Live Males" value={litter.liveMales} />
               <Row label="Live Females" value={litter.liveFemales} />
@@ -555,7 +606,7 @@ export default function LitterDetail() {
                 <ClipboardList className="h-4 w-4 text-primary" /> Whelping Details
               </CardTitle>
               {!whelpingRecord && !showWhelpForm && (
-                <Button size="sm" onClick={() => setShowWhelpForm(true)}>
+                <Button size="sm" onClick={openWhelpForm}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Log Whelping
                 </Button>
               )}
@@ -567,6 +618,11 @@ export default function LitterDetail() {
                     Fill in the whelping details. Saving will automatically mark this litter as <strong>Whelped</strong>.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Date of Birth *</Label>
+                      <Input type="date" value={whelpForm.date}
+                        onChange={e => setWhelpForm(f => ({ ...f, date: e.target.value }))} />
+                    </div>
                     <div className="space-y-1.5">
                       <Label>Whelping Start Time</Label>
                       <Input type="time" value={whelpForm.startTime}

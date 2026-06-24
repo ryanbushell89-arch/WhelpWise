@@ -659,9 +659,17 @@ export interface Puppy {
   /** @nullable */
   buyerName?: string | null;
   /** @nullable */
-  depositPaid?: boolean | null;
-  /** @nullable */
   collectionDate?: string | null;
+  /** @nullable */
+  salePrice?: number | null;
+  /** @nullable */
+  depositAmount?: number | null;
+  depositPaid: boolean;
+  /** @nullable */
+  balanceAmount?: number | null;
+  balancePaid: boolean;
+  /** @nullable */
+  saleDate?: string | null;
   createdAt: string;
 }
 
@@ -731,6 +739,16 @@ export interface PuppyUpdate {
   notes?: string | null;
   /** @nullable */
   collectionDate?: string | null;
+  /** @nullable */
+  salePrice?: number | null;
+  /** @nullable */
+  depositAmount?: number | null;
+  depositPaid?: boolean;
+  /** @nullable */
+  balanceAmount?: number | null;
+  balancePaid?: boolean;
+  /** @nullable */
+  saleDate?: string | null;
 }
 
 export interface WeightEntry {
@@ -843,12 +861,6 @@ export interface Buyer {
   phone?: string | null;
   /** @nullable */
   address?: string | null;
-  /** @nullable */
-  depositAmount?: number | null;
-  depositPaid: boolean;
-  /** @nullable */
-  balanceAmount?: number | null;
-  balancePaid: boolean;
   contractSigned: boolean;
   /** @nullable */
   notes?: string | null;
@@ -865,10 +877,6 @@ export interface BuyerInput {
   /** @nullable */
   address?: string | null;
   /** @nullable */
-  depositAmount?: number | null;
-  /** @nullable */
-  balanceAmount?: number | null;
-  /** @nullable */
   notes?: string | null;
 }
 
@@ -881,12 +889,6 @@ export interface BuyerUpdate {
   phone?: string | null;
   /** @nullable */
   address?: string | null;
-  /** @nullable */
-  depositAmount?: number | null;
-  depositPaid?: boolean;
-  /** @nullable */
-  balanceAmount?: number | null;
-  balancePaid?: boolean;
   contractSigned?: boolean;
   /** @nullable */
   notes?: string | null;
@@ -981,6 +983,7 @@ export interface BudgetLitterSummary {
   status: string;
   totalExpenses: number;
   totalIncome: number;
+  totalPledged: number;
   profit: number;
   puppyCount: number;
 }
@@ -991,6 +994,7 @@ export interface BudgetSummary {
   generalExpenses: number;
   totalExpenses: number;
   totalIncome: number;
+  totalPledged?: number;
   totalProfit: number;
 }
 
@@ -1391,6 +1395,10 @@ q: string;
 
 export type ListBreedingsParams = {
 dogId?: number;
+};
+
+export type ListPuppiesByBuyerParams = {
+buyerId: number;
 };
 
 export type ListExpensesParams = {

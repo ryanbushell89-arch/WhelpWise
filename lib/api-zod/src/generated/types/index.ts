@@ -58,6 +58,7 @@ export * from './heatCycleUpdate';
 export * from './listBreedingsParams';
 export * from './listDogsParams';
 export * from './listExpensesParams';
+export * from './listPuppiesByBuyerParams';
 export * from './listStudListingsParams';
 export * from './litter';
 export * from './litterInput';

@@ -14,6 +14,7 @@ export interface BudgetLitterSummary {
   status: string;
   totalExpenses: number;
   totalIncome: number;
+  totalPledged: number;
   profit: number;
   puppyCount: number;
 }

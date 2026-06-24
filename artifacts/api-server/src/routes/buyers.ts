@@ -22,10 +22,6 @@ function formatBuyer(b: typeof buyersTable.$inferSelect) {
     email: b.email,
     phone: b.phone,
     address: b.address,
-    depositAmount: b.depositAmount,
-    depositPaid: b.depositPaid === "true",
-    balanceAmount: b.balanceAmount,
-    balancePaid: b.balancePaid === "true",
     contractSigned: b.contractSigned === "true",
     notes: b.notes,
     createdAt: b.createdAt.toISOString(),
@@ -65,8 +61,6 @@ router.patch("/buyers/:buyerId", async (req, res): Promise<void> => {
   const parsed = UpdateBuyerBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const updateData: Record<string, any> = { ...parsed.data };
-  if (parsed.data.depositPaid !== undefined) updateData.depositPaid = String(parsed.data.depositPaid);
-  if (parsed.data.balancePaid !== undefined) updateData.balancePaid = String(parsed.data.balancePaid);
   if (parsed.data.contractSigned !== undefined) updateData.contractSigned = String(parsed.data.contractSigned);
   const [buyer] = await db.update(buyersTable).set(updateData)
     .where(and(eq(buyersTable.id, id), eq(buyersTable.userId, userId)))

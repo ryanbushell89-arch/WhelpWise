@@ -55,6 +55,7 @@ import type {
   ListBreedingsParams,
   ListDogsParams,
   ListExpensesParams,
+  ListPuppiesByBuyerParams,
   ListStudListingsParams,
   Litter,
   LitterInput,
@@ -3034,6 +3035,90 @@ export const useCreatePuppy = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreatePuppyMutationOptions(options));
     }
+
+export const getListPuppiesByBuyerUrl = (params: ListPuppiesByBuyerParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/puppies?${stringifiedParams}` : `/api/puppies`
+}
+
+/**
+ * @summary List puppies, filtered by buyer
+ */
+export const listPuppiesByBuyer = async (params: ListPuppiesByBuyerParams, options?: RequestInit): Promise<Puppy[]> => {
+
+  return customFetch<Puppy[]>(getListPuppiesByBuyerUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPuppiesByBuyerQueryKey = (params?: ListPuppiesByBuyerParams,) => {
+    return [
+    `/api/puppies`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPuppiesByBuyerQueryOptions = <TData = Awaited<ReturnType<typeof listPuppiesByBuyer>>, TError = ErrorType<unknown>>(params: ListPuppiesByBuyerParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPuppiesByBuyer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPuppiesByBuyerQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPuppiesByBuyer>>> = ({ signal }) => listPuppiesByBuyer(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPuppiesByBuyer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPuppiesByBuyerQueryResult = NonNullable<Awaited<ReturnType<typeof listPuppiesByBuyer>>>
+export type ListPuppiesByBuyerQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List puppies, filtered by buyer
+ */
+
+export function useListPuppiesByBuyer<TData = Awaited<ReturnType<typeof listPuppiesByBuyer>>, TError = ErrorType<unknown>>(
+ params: ListPuppiesByBuyerParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPuppiesByBuyer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPuppiesByBuyerQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetPuppyUrl = (puppyId: number,) => {
 

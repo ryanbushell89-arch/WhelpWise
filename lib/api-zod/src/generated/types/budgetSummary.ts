@@ -13,5 +13,6 @@ export interface BudgetSummary {
   generalExpenses: number;
   totalExpenses: number;
   totalIncome: number;
+  totalPledged?: number;
   totalProfit: number;
 }

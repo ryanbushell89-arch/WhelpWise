@@ -20,8 +20,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, AlertTriangle, Plus, TrendingUp, TrendingDown, FileText,
   Syringe, Bug, Trash2, Upload, ExternalLink, Printer, CheckCircle2, Camera, Dog as DogIcon,
-  UserPlus, Copy, Mail, Loader2,
+  UserPlus, Copy, Mail, Loader2, PiggyBank, Pencil,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -57,7 +58,7 @@ export default function PuppyProfile() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteResult, setInviteResult] = useState<{ inviteUrl: string; emailSent: boolean } | null>(null);
 
-  const { data: puppy, isLoading } = useGetPuppy(puppyId);
+  const { data: puppy, isLoading, refetch: refetchPuppy } = useGetPuppy(puppyId);
   const { data: weights, refetch: refetchWeights } = useListWeights(puppyId);
   const { data: worming, refetch: refetchWorming } = useListWorming(puppyId);
   const { data: vaccinations, refetch: refetchVaccinations } = useListVaccinations(puppyId);
@@ -138,8 +139,49 @@ export default function PuppyProfile() {
   const [docForm, setDocForm] = useState({ docType: "other", name: "", fileUrl: "" });
   const [showDocForm, setShowDocForm] = useState(false);
 
+  // Sale form
+  const [showSaleForm, setShowSaleForm] = useState(false);
+  const [saleForm, setSaleForm] = useState({
+    salePrice: "", depositAmount: "", depositPaid: false,
+    balanceAmount: "", balancePaid: false, saleDate: "",
+  });
+
   if (isLoading) return <div className="p-8"><Skeleton className="h-48 w-full rounded-xl" /></div>;
   if (!puppy) return <div className="p-8 text-muted-foreground">Puppy not found.</div>;
+
+  function openSaleForm() {
+    const p = puppy as any;
+    setSaleForm({
+      salePrice: p.salePrice != null ? String(p.salePrice) : "",
+      depositAmount: p.depositAmount != null ? String(p.depositAmount) : "",
+      depositPaid: !!p.depositPaid,
+      balanceAmount: p.balanceAmount != null ? String(p.balanceAmount) : "",
+      balancePaid: !!p.balancePaid,
+      saleDate: p.saleDate ?? "",
+    });
+    setShowSaleForm(true);
+  }
+
+  async function saveSale() {
+    try {
+      await updatePuppy.mutateAsync({
+        puppyId,
+        data: {
+          salePrice: saleForm.salePrice ? parseFloat(saleForm.salePrice) : null,
+          depositAmount: saleForm.depositAmount ? parseFloat(saleForm.depositAmount) : null,
+          depositPaid: saleForm.depositPaid,
+          balanceAmount: saleForm.balanceAmount ? parseFloat(saleForm.balanceAmount) : null,
+          balancePaid: saleForm.balancePaid,
+          saleDate: saleForm.saleDate || null,
+        } as any,
+      });
+      await refetchPuppy();
+      setShowSaleForm(false);
+      toast({ title: "Sale details saved" });
+    } catch {
+      toast({ title: "Error saving sale details", variant: "destructive" });
+    }
+  }
 
   const ws = (weights as any[]) ?? [];
   const latestWeight = ws.length > 0 ? ws[ws.length - 1] : null;
@@ -337,6 +379,74 @@ export default function PuppyProfile() {
               {(puppy as any).buyerName && <Row label="Reserved By" value={(puppy as any).buyerName} />}
               {(puppy as any).collectionDate && <Row label="Collection Date" value={format(new Date((puppy as any).collectionDate), "d MMM yyyy")} />}
               {(puppy as any).notes && <div className="mt-2 text-muted-foreground pt-2 border-t">{(puppy as any).notes}</div>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PiggyBank className="h-4 w-4 text-primary" /> Sale
+              </CardTitle>
+              {!showSaleForm && (
+                <Button size="sm" variant="outline" onClick={openSaleForm}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> {(puppy as any).salePrice != null ? "Edit" : "Set Price"}
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {showSaleForm ? (
+                <div className="space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Sale Price (£)</Label>
+                      <Input type="number" step="0.01" min="0" value={saleForm.salePrice}
+                        onChange={e => setSaleForm(f => ({ ...f, salePrice: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Sale Date</Label>
+                      <Input type="date" value={saleForm.saleDate}
+                        onChange={e => setSaleForm(f => ({ ...f, saleDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Deposit Amount (£)</Label>
+                      <Input type="number" step="0.01" min="0" value={saleForm.depositAmount}
+                        onChange={e => setSaleForm(f => ({ ...f, depositAmount: e.target.value }))} />
+                    </div>
+                    <div className="flex items-center gap-2 pt-5">
+                      <Checkbox checked={saleForm.depositPaid}
+                        onCheckedChange={v => setSaleForm(f => ({ ...f, depositPaid: !!v }))} />
+                      <Label className="text-xs font-normal">Deposit paid</Label>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Balance Amount (£)</Label>
+                      <Input type="number" step="0.01" min="0" value={saleForm.balanceAmount}
+                        onChange={e => setSaleForm(f => ({ ...f, balanceAmount: e.target.value }))} />
+                    </div>
+                    <div className="flex items-center gap-2 pt-5">
+                      <Checkbox checked={saleForm.balancePaid}
+                        onCheckedChange={v => setSaleForm(f => ({ ...f, balancePaid: !!v }))} />
+                      <Label className="text-xs font-normal">Balance paid</Label>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setShowSaleForm(false)}>Cancel</Button>
+                    <Button size="sm" onClick={saveSale} disabled={updatePuppy.isPending}>Save</Button>
+                  </div>
+                </div>
+              ) : (puppy as any).salePrice != null || (puppy as any).depositAmount != null || (puppy as any).balanceAmount != null ? (
+                <>
+                  <Row label="Sale Price" value={(puppy as any).salePrice != null ? `£${(puppy as any).salePrice.toFixed(2)}` : null} />
+                  {(puppy as any).saleDate && <Row label="Sale Date" value={format(new Date((puppy as any).saleDate), "d MMM yyyy")} />}
+                  {(puppy as any).depositAmount != null && (
+                    <Row label="Deposit" value={`£${(puppy as any).depositAmount.toFixed(2)} ${(puppy as any).depositPaid ? "(paid)" : "(pending)"}`} />
+                  )}
+                  {(puppy as any).balanceAmount != null && (
+                    <Row label="Balance" value={`£${(puppy as any).balanceAmount.toFixed(2)} ${(puppy as any).balancePaid ? "(paid)" : "(pending)"}`} />
+                  )}
+                </>
+              ) : (
+                <p className="text-muted-foreground italic">No sale price set yet.</p>
+              )}
             </CardContent>
           </Card>
         </div>

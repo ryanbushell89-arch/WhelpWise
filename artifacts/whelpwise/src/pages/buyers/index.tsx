@@ -51,10 +51,6 @@ export default function BuyersDirectory() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="hidden sm:flex gap-2">
-                      <Badge variant={buyer.depositPaid ? "default" : "outline"} className={`text-xs ${buyer.depositPaid ? "bg-green-600 text-white" : ""}`}>
-                        {buyer.depositPaid ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                        Deposit
-                      </Badge>
                       <Badge variant={buyer.contractSigned ? "default" : "outline"} className={`text-xs ${buyer.contractSigned ? "bg-green-600 text-white" : ""}`}>
                         {buyer.contractSigned ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
                         Contract

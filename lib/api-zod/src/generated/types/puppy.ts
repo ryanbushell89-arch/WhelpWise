@@ -39,8 +39,16 @@ export interface Puppy {
   /** @nullable */
   buyerName?: string | null;
   /** @nullable */
-  depositPaid?: boolean | null;
-  /** @nullable */
   collectionDate?: string | null;
+  /** @nullable */
+  salePrice?: number | null;
+  /** @nullable */
+  depositAmount?: number | null;
+  depositPaid: boolean;
+  /** @nullable */
+  balanceAmount?: number | null;
+  balancePaid: boolean;
+  /** @nullable */
+  saleDate?: string | null;
   createdAt: string;
 }

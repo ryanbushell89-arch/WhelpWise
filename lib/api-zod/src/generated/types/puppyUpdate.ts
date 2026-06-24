@@ -34,4 +34,14 @@ export interface PuppyUpdate {
   notes?: string | null;
   /** @nullable */
   collectionDate?: string | null;
+  /** @nullable */
+  salePrice?: number | null;
+  /** @nullable */
+  depositAmount?: number | null;
+  depositPaid?: boolean;
+  /** @nullable */
+  balanceAmount?: number | null;
+  balancePaid?: boolean;
+  /** @nullable */
+  saleDate?: string | null;
 }

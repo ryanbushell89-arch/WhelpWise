@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import {
   db, littersTable, dogsTable, whelpingRecordsTable, puppiesTable, buyersTable, weightEntriesTable,
-  puppyWormingTable, puppyVaccinationsTable, puppyDocumentsTable, whelpingDocumentsTable,
+  puppyWormingTable, puppyVaccinationsTable, puppyDocumentsTable, whelpingDocumentsTable, expensesTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
@@ -11,6 +11,7 @@ import {
   CreatePuppyBody,
   UpdatePuppyBody,
   CreateWeightBody,
+  ListPuppiesByBuyerQueryParams,
 } from "@workspace/api-zod";
 import { type AuthenticatedRequest } from "../middlewares/requireAuth";
 import type { Request } from "express";
@@ -23,6 +24,18 @@ function uid(req: Request): string {
 
 function parseId(raw: string | string[]): number {
   return parseInt(Array.isArray(raw) ? raw[0] : raw, 10);
+}
+
+function formatPuppy(p: typeof puppiesTable.$inferSelect, buyerName: string | null) {
+  return {
+    ...p,
+    alive: p.alive === "true",
+    placentaPresent: p.placentaPresent === "true" ? true : p.placentaPresent === "false" ? false : null,
+    depositPaid: p.depositPaid === "true",
+    balancePaid: p.balancePaid === "true",
+    buyerName,
+    createdAt: p.createdAt.toISOString(),
+  };
 }
 
 async function litterWithNames(l: typeof littersTable.$inferSelect) {
@@ -114,6 +127,7 @@ router.delete("/litters/:litterId", async (req, res): Promise<void> => {
   await db.delete(puppiesTable).where(eq(puppiesTable.litterId, id));
   await db.delete(whelpingRecordsTable).where(eq(whelpingRecordsTable.litterId, id));
   await db.delete(whelpingDocumentsTable).where(eq(whelpingDocumentsTable.litterId, id));
+  await db.delete(expensesTable).where(eq(expensesTable.litterId, id));
   await db.delete(littersTable).where(and(eq(littersTable.id, id), eq(littersTable.userId, userId)));
   res.status(204).send();
 });
@@ -148,14 +162,7 @@ router.get("/litters/:litterId/puppies", async (req, res): Promise<void> => {
       const [buyer] = await db.select().from(buyersTable).where(eq(buyersTable.id, p.buyerId));
       buyerName = buyer ? `${buyer.firstName} ${buyer.lastName}` : null;
     }
-    return {
-      ...p,
-      alive: p.alive === "true",
-      placentaPresent: p.placentaPresent === "true" ? true : p.placentaPresent === "false" ? false : null,
-      depositPaid: null as boolean | null,
-      buyerName,
-      createdAt: p.createdAt.toISOString(),
-    };
+    return formatPuppy(p, buyerName);
   }));
   res.json(enriched);
 });
@@ -181,14 +188,17 @@ router.post("/litters/:litterId/puppies", async (req, res): Promise<void> => {
     placentaPresent: parsed.data.placentaPresent != null ? String(parsed.data.placentaPresent) : null,
     notes: parsed.data.notes ?? null,
   }).returning();
-  res.status(201).json({
-    ...puppy,
-    alive: puppy.alive === "true",
-    placentaPresent: puppy.placentaPresent === "true" ? true : puppy.placentaPresent === "false" ? false : null,
-    depositPaid: null,
-    buyerName: null,
-    createdAt: puppy.createdAt.toISOString(),
-  });
+  res.status(201).json(formatPuppy(puppy, null));
+});
+
+// ─── Puppies by buyer ──────────────────────────────────────────────────────────
+router.get("/puppies", async (req, res): Promise<void> => {
+  const parsed = ListPuppiesByBuyerQueryParams.safeParse(req.query);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const puppies = await db.select().from(puppiesTable).where(eq(puppiesTable.buyerId, parsed.data.buyerId));
+  const [buyer] = await db.select().from(buyersTable).where(eq(buyersTable.id, parsed.data.buyerId));
+  const buyerName = buyer ? `${buyer.firstName} ${buyer.lastName}` : null;
+  res.json(puppies.map(p => formatPuppy(p, buyerName)));
 });
 
 // ─── Puppy by ID ──────────────────────────────────────────────────────────────
@@ -202,14 +212,7 @@ router.get("/puppies/:puppyId", async (req, res): Promise<void> => {
     const [buyer] = await db.select().from(buyersTable).where(eq(buyersTable.id, puppy.buyerId));
     buyerName = buyer ? `${buyer.firstName} ${buyer.lastName}` : null;
   }
-  res.json({
-    ...puppy,
-    alive: puppy.alive === "true",
-    placentaPresent: puppy.placentaPresent === "true" ? true : puppy.placentaPresent === "false" ? false : null,
-    depositPaid: null,
-    buyerName,
-    createdAt: puppy.createdAt.toISOString(),
-  });
+  res.json(formatPuppy(puppy, buyerName));
 });
 
 router.patch("/puppies/:puppyId", async (req, res): Promise<void> => {
@@ -220,16 +223,16 @@ router.patch("/puppies/:puppyId", async (req, res): Promise<void> => {
   const updateData: Record<string, any> = { ...parsed.data };
   if (parsed.data.alive !== undefined) updateData.alive = String(parsed.data.alive);
   if (parsed.data.placentaPresent !== undefined) updateData.placentaPresent = parsed.data.placentaPresent != null ? String(parsed.data.placentaPresent) : null;
+  if (parsed.data.depositPaid !== undefined) updateData.depositPaid = String(parsed.data.depositPaid);
+  if (parsed.data.balancePaid !== undefined) updateData.balancePaid = String(parsed.data.balancePaid);
   const [puppy] = await db.update(puppiesTable).set(updateData).where(eq(puppiesTable.id, id)).returning();
   if (!puppy) { res.status(404).json({ error: "Puppy not found" }); return; }
-  res.json({
-    ...puppy,
-    alive: puppy.alive === "true",
-    placentaPresent: puppy.placentaPresent === "true" ? true : puppy.placentaPresent === "false" ? false : null,
-    depositPaid: null,
-    buyerName: null,
-    createdAt: puppy.createdAt.toISOString(),
-  });
+  let buyerName: string | null = null;
+  if (puppy.buyerId) {
+    const [buyer] = await db.select().from(buyersTable).where(eq(buyersTable.id, puppy.buyerId));
+    buyerName = buyer ? `${buyer.firstName} ${buyer.lastName}` : null;
+  }
+  res.json(formatPuppy(puppy, buyerName));
 });
 
 router.delete("/puppies/:puppyId", async (req, res): Promise<void> => {
@@ -388,14 +391,12 @@ router.put("/puppies/:puppyId/buyer", async (req, res): Promise<void> => {
     .where(eq(puppiesTable.id, id))
     .returning();
   if (!puppy) { res.status(404).json({ error: "Puppy not found" }); return; }
-  res.json({
-    ...puppy,
-    alive: puppy.alive === "true",
-    placentaPresent: puppy.placentaPresent === "true" ? true : puppy.placentaPresent === "false" ? false : null,
-    depositPaid: null,
-    buyerName: null,
-    createdAt: puppy.createdAt.toISOString(),
-  });
+  let buyerName: string | null = null;
+  if (puppy.buyerId) {
+    const [buyer] = await db.select().from(buyersTable).where(eq(buyersTable.id, puppy.buyerId));
+    buyerName = buyer ? `${buyer.firstName} ${buyer.lastName}` : null;
+  }
+  res.json(formatPuppy(puppy, buyerName));
 });
 
 export default router;

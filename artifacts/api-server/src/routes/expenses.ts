@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, expensesTable, littersTable, puppiesTable, buyersTable, dogsTable } from "@workspace/db";
+import { db, expensesTable, littersTable, puppiesTable, dogsTable } from "@workspace/db";
 import { eq, and, gte, lte, isNull } from "drizzle-orm";
 import { CreateExpenseBody, UpdateExpenseBody, ListExpensesQueryParams, GetBudgetSummaryQueryParams } from "@workspace/api-zod";
 import { type AuthenticatedRequest } from "../middlewares/requireAuth";
@@ -99,12 +99,16 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
       .where(and(eq(expensesTable.userId, userId), eq(expensesTable.litterId, litter.id)));
     const totalExpenses = litterExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+    // Income is sold per-puppy (not per-buyer) so a buyer taking multiple
+    // puppies from the same litter doesn't get their payment counted twice.
     const puppies = await db.select().from(puppiesTable).where(eq(puppiesTable.litterId, litter.id));
     let totalIncome = 0;
+    let totalPledged = 0;
     for (const puppy of puppies) {
       if (!puppy.buyerId) continue;
-      const [buyer] = await db.select().from(buyersTable).where(eq(buyersTable.id, puppy.buyerId));
-      if (buyer) totalIncome += (buyer.depositAmount ?? 0) + (buyer.balanceAmount ?? 0);
+      totalPledged += puppy.salePrice ?? ((puppy.depositAmount ?? 0) + (puppy.balanceAmount ?? 0));
+      if (puppy.depositPaid === "true") totalIncome += puppy.depositAmount ?? 0;
+      if (puppy.balancePaid === "true") totalIncome += puppy.balanceAmount ?? 0;
     }
 
     const [sire] = litter.sireId ? await db.select().from(dogsTable).where(eq(dogsTable.id, litter.sireId)) : [undefined];
@@ -118,6 +122,7 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
       status: litter.status,
       totalExpenses,
       totalIncome,
+      totalPledged,
       profit: totalIncome - totalExpenses,
       puppyCount: puppies.length,
     };
@@ -134,6 +139,7 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
 
   const totalExpenses = litterSummaries.reduce((sum, l) => sum + l.totalExpenses, 0) + generalExpenses;
   const totalIncome = litterSummaries.reduce((sum, l) => sum + l.totalIncome, 0);
+  const totalPledged = litterSummaries.reduce((sum, l) => sum + l.totalPledged, 0);
 
   res.json({
     year,
@@ -141,6 +147,7 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
     generalExpenses,
     totalExpenses,
     totalIncome,
+    totalPledged,
     totalProfit: totalIncome - totalExpenses,
   });
 });

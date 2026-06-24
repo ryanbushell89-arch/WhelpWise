@@ -184,7 +184,7 @@ function ExpenseList({
 function LitterBudgetCard({
   litter, expanded, onToggle, onDataChanged,
 }: {
-  litter: { litterId: number; label: string; dob: string | null; status: string; totalExpenses: number; totalIncome: number; profit: number; puppyCount: number };
+  litter: { litterId: number; label: string; dob: string | null; status: string; totalExpenses: number; totalIncome: number; totalPledged: number; profit: number; puppyCount: number };
   expanded: boolean;
   onToggle: () => void;
   onDataChanged: () => Promise<void>;
@@ -209,6 +209,9 @@ function LitterBudgetCard({
             <div>
               <p className="text-xs text-muted-foreground">Income</p>
               <p className="text-sm font-medium text-green-600 dark:text-green-400">{money(litter.totalIncome)}</p>
+              {litter.totalPledged > litter.totalIncome && (
+                <p className="text-[10px] text-muted-foreground">of {money(litter.totalPledged)} pledged</p>
+              )}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Costs</p>
@@ -302,8 +305,9 @@ export default function BudgetPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Total Income</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Total Income Received</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{money(summary?.totalIncome ?? 0)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">of {money(summary?.totalPledged ?? 0)} pledged in sales</p>
             </CardContent>
           </Card>
           <Card>

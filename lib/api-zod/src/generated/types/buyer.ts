@@ -16,12 +16,6 @@ export interface Buyer {
   phone?: string | null;
   /** @nullable */
   address?: string | null;
-  /** @nullable */
-  depositAmount?: number | null;
-  depositPaid: boolean;
-  /** @nullable */
-  balanceAmount?: number | null;
-  balancePaid: boolean;
   contractSigned: boolean;
   /** @nullable */
   notes?: string | null;
