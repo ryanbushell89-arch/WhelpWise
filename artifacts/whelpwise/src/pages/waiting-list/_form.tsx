@@ -162,7 +162,7 @@ export function WLForm({ initialValues = empty, mode, entryId }: {
               <Label className="text-xs cursor-pointer">Deposit Paid</Label>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Deposit Amount (£)</Label>
+              <Label className="text-xs">Deposit Amount ($)</Label>
               <Input placeholder="e.g. 250" value={form.depositAmount} onChange={e => set("depositAmount", e.target.value)} />
             </div>
             {mode === "edit" && (

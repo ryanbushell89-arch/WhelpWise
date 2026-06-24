@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  PiggyBank, Plus, Trash2, TrendingUp, TrendingDown, Wallet, ChevronDown, ChevronRight, Baby,
+  PiggyBank, Plus, Trash2, TrendingUp, TrendingDown, Wallet, ChevronDown, ChevronRight, Baby, FileDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +30,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORIES = Object.keys(CATEGORY_LABELS);
 
 function money(n: number) {
-  return `£${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function ProfitBadge({ amount }: { amount: number }) {
@@ -114,7 +114,7 @@ function ExpenseForm({
         </Select>
       </div>
       <div className="space-y-1">
-        <Label className="text-xs">Amount (£)</Label>
+        <Label className="text-xs">Amount ($)</Label>
         <Input type="number" step="0.01" min="0" value={form.amount} onChange={e => set("amount", e.target.value)} required />
       </div>
       <div className="space-y-1">
@@ -289,12 +289,17 @@ export default function BudgetPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Track costs and income for each litter, and your total for the year.</p>
         </div>
-        <Select value={String(year)} onValueChange={v => setYear(parseInt(v, 10))}>
-          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={String(year)} onValueChange={v => setYear(parseInt(v, 10))}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => window.open(`/api/budget/report?year=${year}`, "_blank")}>
+            <FileDown className="h-4 w-4 mr-1.5" /> Download PDF
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

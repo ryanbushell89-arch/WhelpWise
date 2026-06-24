@@ -442,7 +442,7 @@ export default function PetProfile() {
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="font-medium">{v.reason}</span>
                           <span className="text-sm text-muted-foreground">{format(parseISO(v.date), "d MMM yyyy")}</span>
-                          {v.cost && <Badge variant="outline" className="text-xs">£{v.cost}</Badge>}
+                          {v.cost && <Badge variant="outline" className="text-xs">${v.cost}</Badge>}
                         </div>
                         <div className="mt-1 text-sm text-muted-foreground flex gap-4 flex-wrap">
                           {v.vet && <span>Vet: <b>{v.vet}</b></span>}

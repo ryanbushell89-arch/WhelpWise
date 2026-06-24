@@ -86,7 +86,7 @@ export default function ContractsDirectory() {
                   </div>
                   <div className="font-semibold mt-0.5">{partyName ?? "Unknown party"}{subject ? ` — ${subject}` : ""}</div>
                   <div className="text-xs text-muted-foreground">
-                    {c.contractDate ? format(new Date(c.contractDate), "d MMM yyyy") : "No date"}{c.salePrice ? ` · £${c.salePrice}` : ""}{c.studFee ? ` · Fee: £${c.studFee}` : ""}
+                    {c.contractDate ? format(new Date(c.contractDate), "d MMM yyyy") : "No date"}{c.salePrice ? ` · $${c.salePrice}` : ""}{c.studFee ? ` · Fee: $${c.studFee}` : ""}
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 group-hover:text-primary transition-colors" />

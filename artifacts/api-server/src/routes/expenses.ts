@@ -27,6 +27,46 @@ function formatExpense(e: typeof expensesTable.$inferSelect) {
   };
 }
 
+// Shared by the JSON budget summary and both PDF reports so income/expense
+// numbers can never drift between them.
+export async function computeLitterFinancials(userId: string, litter: typeof littersTable.$inferSelect) {
+  const litterExpenses = await db.select().from(expensesTable)
+    .where(and(eq(expensesTable.userId, userId), eq(expensesTable.litterId, litter.id)));
+  const totalExpenses = litterExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Income is summed per-puppy (not per-buyer) so a buyer taking multiple
+  // puppies from the same litter doesn't get their payment counted twice.
+  const puppies = await db.select().from(puppiesTable).where(eq(puppiesTable.litterId, litter.id));
+  let totalIncome = 0;
+  let totalPledged = 0;
+  for (const puppy of puppies) {
+    if (!puppy.buyerId) continue;
+    totalPledged += puppy.salePrice ?? ((puppy.depositAmount ?? 0) + (puppy.balanceAmount ?? 0));
+    if (puppy.depositPaid === "true") totalIncome += puppy.depositAmount ?? 0;
+    if (puppy.balancePaid === "true") totalIncome += puppy.balanceAmount ?? 0;
+  }
+
+  const [sire] = litter.sireId ? await db.select().from(dogsTable).where(eq(dogsTable.id, litter.sireId)) : [undefined];
+  const [dam] = litter.damId ? await db.select().from(dogsTable).where(eq(dogsTable.id, litter.damId)) : [undefined];
+  const label = `${dam?.registeredName ?? "Unknown Dam"} × ${sire?.registeredName ?? "Unknown Sire"}`;
+
+  return {
+    litterId: litter.id,
+    label,
+    damName: dam?.registeredName ?? null,
+    sireName: sire?.registeredName ?? null,
+    dob: litter.dob,
+    status: litter.status,
+    totalExpenses,
+    totalIncome,
+    totalPledged,
+    profit: totalIncome - totalExpenses,
+    puppyCount: puppies.length,
+    expenses: litterExpenses,
+    puppies,
+  };
+}
+
 // ─── Expenses ───────────────────────────────────────────────────────────────
 router.get("/expenses", async (req, res): Promise<void> => {
   const userId = uid(req);
@@ -78,12 +118,8 @@ router.delete("/expenses/:expenseId", async (req, res): Promise<void> => {
   res.status(204).send();
 });
 
-// ─── Budget Summary ───────────────────────────────────────────────────────────
-router.get("/budget/summary", async (req, res): Promise<void> => {
-  const userId = uid(req);
-  const parsed = GetBudgetSummaryQueryParams.safeParse(req.query);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-  const year = parsed.data.year ?? new Date().getFullYear();
+// Shared by the JSON budget summary and the annual PDF report.
+export async function computeBudgetSummary(userId: string, year: number) {
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
 
@@ -95,37 +131,8 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
     ));
 
   const litterSummaries = await Promise.all(litters.map(async (litter) => {
-    const litterExpenses = await db.select().from(expensesTable)
-      .where(and(eq(expensesTable.userId, userId), eq(expensesTable.litterId, litter.id)));
-    const totalExpenses = litterExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-    // Income is sold per-puppy (not per-buyer) so a buyer taking multiple
-    // puppies from the same litter doesn't get their payment counted twice.
-    const puppies = await db.select().from(puppiesTable).where(eq(puppiesTable.litterId, litter.id));
-    let totalIncome = 0;
-    let totalPledged = 0;
-    for (const puppy of puppies) {
-      if (!puppy.buyerId) continue;
-      totalPledged += puppy.salePrice ?? ((puppy.depositAmount ?? 0) + (puppy.balanceAmount ?? 0));
-      if (puppy.depositPaid === "true") totalIncome += puppy.depositAmount ?? 0;
-      if (puppy.balancePaid === "true") totalIncome += puppy.balanceAmount ?? 0;
-    }
-
-    const [sire] = litter.sireId ? await db.select().from(dogsTable).where(eq(dogsTable.id, litter.sireId)) : [undefined];
-    const [dam] = litter.damId ? await db.select().from(dogsTable).where(eq(dogsTable.id, litter.damId)) : [undefined];
-    const label = `${dam?.registeredName ?? "Unknown Dam"} × ${sire?.registeredName ?? "Unknown Sire"}`;
-
-    return {
-      litterId: litter.id,
-      label,
-      dob: litter.dob,
-      status: litter.status,
-      totalExpenses,
-      totalIncome,
-      totalPledged,
-      profit: totalIncome - totalExpenses,
-      puppyCount: puppies.length,
-    };
+    const { expenses, puppies, ...summary } = await computeLitterFinancials(userId, litter);
+    return summary;
   }));
 
   const generalExpensesRows = await db.select().from(expensesTable)
@@ -141,7 +148,7 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
   const totalIncome = litterSummaries.reduce((sum, l) => sum + l.totalIncome, 0);
   const totalPledged = litterSummaries.reduce((sum, l) => sum + l.totalPledged, 0);
 
-  res.json({
+  return {
     year,
     litters: litterSummaries,
     generalExpenses,
@@ -149,7 +156,16 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
     totalIncome,
     totalPledged,
     totalProfit: totalIncome - totalExpenses,
-  });
+  };
+}
+
+// ─── Budget Summary ───────────────────────────────────────────────────────────
+router.get("/budget/summary", async (req, res): Promise<void> => {
+  const userId = uid(req);
+  const parsed = GetBudgetSummaryQueryParams.safeParse(req.query);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const year = parsed.data.year ?? new Date().getFullYear();
+  res.json(await computeBudgetSummary(userId, year));
 });
 
 export default router;

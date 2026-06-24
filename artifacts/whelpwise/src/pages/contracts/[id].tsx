@@ -111,14 +111,14 @@ function PrintView({ c }: { c: any }) {
         <div className="space-y-1">
           {isStud ? (
             <>
-              <Row label="Stud Fee" value={c.studFee ? `£${c.studFee}` : undefined} />
+              <Row label="Stud Fee" value={c.studFee ? `$${c.studFee}` : undefined} />
               <Row label="Payment Terms" value={c.studFeePaymentTerms} />
             </>
           ) : (
             <>
-              <Row label="Sale Price" value={c.salePrice ? `£${c.salePrice}` : undefined} />
-              <Row label="Deposit Paid" value={c.depositAmount ? `£${c.depositAmount}` : undefined} />
-              <Row label="Balance Due" value={c.balanceDue ? `£${c.balanceDue}` : undefined} />
+              <Row label="Sale Price" value={c.salePrice ? `$${c.salePrice}` : undefined} />
+              <Row label="Deposit Paid" value={c.depositAmount ? `$${c.depositAmount}` : undefined} />
+              <Row label="Balance Due" value={c.balanceDue ? `$${c.balanceDue}` : undefined} />
               <Row label="Balance Due Date" value={c.balanceDueDate ? format(new Date(c.balanceDueDate), "d MMMM yyyy") : undefined} />
             </>
           )}
@@ -451,14 +451,14 @@ export default function ContractDetail() {
             <CardContent className="space-y-2">
               {isStud ? (
                 <>
-                  <Row label="Stud Fee" value={c.studFee ? `£${c.studFee}` : undefined} />
+                  <Row label="Stud Fee" value={c.studFee ? `$${c.studFee}` : undefined} />
                   <Row label="Payment Terms" value={c.studFeePaymentTerms} />
                 </>
               ) : (
                 <>
-                  <Row label="Sale Price" value={c.salePrice ? `£${c.salePrice}` : undefined} />
-                  <Row label="Deposit" value={c.depositAmount ? `£${c.depositAmount}` : undefined} />
-                  <Row label="Balance Due" value={c.balanceDue ? `£${c.balanceDue}` : undefined} />
+                  <Row label="Sale Price" value={c.salePrice ? `$${c.salePrice}` : undefined} />
+                  <Row label="Deposit" value={c.depositAmount ? `$${c.depositAmount}` : undefined} />
+                  <Row label="Balance Due" value={c.balanceDue ? `$${c.balanceDue}` : undefined} />
                   <Row label="Balance Due Date" value={c.balanceDueDate ? format(new Date(c.balanceDueDate), "d MMMM yyyy") : undefined} />
                 </>
               )}

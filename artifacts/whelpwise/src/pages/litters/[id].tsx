@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Baby, Plus, Heart, HeartOff, FileDown, FileText,
+  ArrowLeft, Baby, Plus, Heart, HeartOff, FileDown, FileText, PiggyBank,
   Upload, Trash2, ExternalLink, CheckCircle2, ClipboardList, Pencil, Check, X, AlertTriangle, Camera,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -319,6 +319,10 @@ export default function LitterDetail() {
           <Button variant="outline" size="sm"
             onClick={() => window.open(`/api/litters/${litterId}/report`, "_blank")}>
             <FileDown className="h-4 w-4 mr-1" /> PDF Report
+          </Button>
+          <Button variant="outline" size="sm"
+            onClick={() => window.open(`/api/litters/${litterId}/financial-report`, "_blank")}>
+            <PiggyBank className="h-4 w-4 mr-1" /> Financial Report
           </Button>
           <Button size="sm" onClick={() => { setTab("whelping"); openWhelpForm(); }}>
             <ClipboardList className="h-4 w-4 mr-1" /> Log Whelping

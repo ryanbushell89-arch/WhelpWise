@@ -504,7 +504,7 @@ export default function PuppyProfile() {
                 <div className="space-y-3">
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Sale Price (£)</Label>
+                      <Label className="text-xs">Sale Price ($)</Label>
                       <Input type="number" step="0.01" min="0" value={saleForm.salePrice}
                         onChange={e => setSaleForm(f => ({ ...f, salePrice: e.target.value }))} />
                     </div>
@@ -514,7 +514,7 @@ export default function PuppyProfile() {
                         onChange={e => setSaleForm(f => ({ ...f, saleDate: e.target.value }))} />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Deposit Amount (£)</Label>
+                      <Label className="text-xs">Deposit Amount ($)</Label>
                       <Input type="number" step="0.01" min="0" value={saleForm.depositAmount}
                         onChange={e => setSaleForm(f => ({ ...f, depositAmount: e.target.value }))} />
                     </div>
@@ -524,7 +524,7 @@ export default function PuppyProfile() {
                       <Label className="text-xs font-normal">Deposit paid</Label>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Balance Amount (£)</Label>
+                      <Label className="text-xs">Balance Amount ($)</Label>
                       <Input type="number" step="0.01" min="0" value={saleForm.balanceAmount}
                         onChange={e => setSaleForm(f => ({ ...f, balanceAmount: e.target.value }))} />
                     </div>
@@ -541,13 +541,13 @@ export default function PuppyProfile() {
                 </div>
               ) : (puppy as any).salePrice != null || (puppy as any).depositAmount != null || (puppy as any).balanceAmount != null ? (
                 <>
-                  <Row label="Sale Price" value={(puppy as any).salePrice != null ? `£${(puppy as any).salePrice.toFixed(2)}` : null} />
+                  <Row label="Sale Price" value={(puppy as any).salePrice != null ? `$${(puppy as any).salePrice.toFixed(2)}` : null} />
                   {(puppy as any).saleDate && <Row label="Sale Date" value={format(new Date((puppy as any).saleDate), "d MMM yyyy")} />}
                   {(puppy as any).depositAmount != null && (
-                    <Row label="Deposit" value={`£${(puppy as any).depositAmount.toFixed(2)} ${(puppy as any).depositPaid ? "(paid)" : "(pending)"}`} />
+                    <Row label="Deposit" value={`$${(puppy as any).depositAmount.toFixed(2)} ${(puppy as any).depositPaid ? "(paid)" : "(pending)"}`} />
                   )}
                   {(puppy as any).balanceAmount != null && (
-                    <Row label="Balance" value={`£${(puppy as any).balanceAmount.toFixed(2)} ${(puppy as any).balancePaid ? "(paid)" : "(pending)"}`} />
+                    <Row label="Balance" value={`$${(puppy as any).balanceAmount.toFixed(2)} ${(puppy as any).balancePaid ? "(paid)" : "(pending)"}`} />
                   )}
                 </>
               ) : (

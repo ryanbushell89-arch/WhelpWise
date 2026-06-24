@@ -212,10 +212,10 @@ export default function WaitingListDetail() {
         <CardContent className="flex items-center gap-4">
           {e.depositPaid ? (
             <span className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium">
-              <CheckCircle2 className="h-5 w-5" /> Deposit paid{e.depositAmount ? ` — £${e.depositAmount}` : ""}
+              <CheckCircle2 className="h-5 w-5" /> Deposit paid{e.depositAmount ? ` — $${e.depositAmount}` : ""}
             </span>
           ) : (
-            <span className="text-muted-foreground">No deposit received{e.depositAmount ? ` (requested: £${e.depositAmount})` : ""}</span>
+            <span className="text-muted-foreground">No deposit received{e.depositAmount ? ` (requested: $${e.depositAmount})` : ""}</span>
           )}
         </CardContent>
       </Card>

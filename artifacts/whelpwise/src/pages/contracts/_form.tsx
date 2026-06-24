@@ -318,15 +318,15 @@ export function ContractForm({ initialValues = empty, mode, contractId, waitingL
             {!isStudContract ? (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Sale Price (£)</Label>
+                  <Label className="text-xs">Sale Price ($)</Label>
                   <Input placeholder="e.g. 1500" value={form.salePrice} onChange={e => set("salePrice", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Deposit Amount (£)</Label>
+                  <Label className="text-xs">Deposit Amount ($)</Label>
                   <Input placeholder="e.g. 250" value={form.depositAmount} onChange={e => set("depositAmount", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Balance Due (£)</Label>
+                  <Label className="text-xs">Balance Due ($)</Label>
                   <Input placeholder="e.g. 1250" value={form.balanceDue} onChange={e => set("balanceDue", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
@@ -337,7 +337,7 @@ export function ContractForm({ initialValues = empty, mode, contractId, waitingL
             ) : (
               <>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Stud Fee (£)</Label>
+                  <Label className="text-xs">Stud Fee ($)</Label>
                   <Input placeholder="e.g. 800" value={form.studFee} onChange={e => set("studFee", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
