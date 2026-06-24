@@ -988,6 +988,16 @@ export interface BudgetLitterSummary {
   puppyCount: number;
 }
 
+export interface OpeningBalance {
+  /** @nullable */
+  id: number | null;
+  year: number;
+  income: number;
+  expenses: number;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export interface BudgetSummary {
   year: number;
   litters: BudgetLitterSummary[];
@@ -996,6 +1006,25 @@ export interface BudgetSummary {
   totalIncome: number;
   totalPledged?: number;
   totalProfit: number;
+  openingBalance: OpeningBalance;
+  /** Cumulative net profit from all years before this one, carried forward. */
+  retainedEarnings: number;
+  /** Lifetime income through the end of this year, including all opening balances. */
+  cumulativeIncome: number;
+  /** Lifetime expenses through the end of this year, including all opening balances. */
+  cumulativeExpenses: number;
+  /** Lifetime net profit through the end of this year (retainedEarnings + totalProfit). */
+  cumulativeProfit: number;
+}
+
+export interface OpeningBalanceInput {
+  year: number;
+  /** @minimum 0 */
+  income: number;
+  /** @minimum 0 */
+  expenses: number;
+  /** @nullable */
+  notes?: string | null;
 }
 
 export interface StudListing {
@@ -1408,6 +1437,10 @@ year?: number;
 
 export type GetBudgetSummaryParams = {
 year?: number;
+};
+
+export type GetOpeningBalanceParams = {
+year: number;
 };
 
 export type ListStudListingsParams = {

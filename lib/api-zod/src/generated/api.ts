@@ -1482,7 +1482,66 @@ export const GetBudgetSummaryResponse = zod.object({
   "totalExpenses": zod.number(),
   "totalIncome": zod.number(),
   "totalPledged": zod.number().optional(),
-  "totalProfit": zod.number()
+  "totalProfit": zod.number(),
+  "openingBalance": zod.object({
+  "id": zod.number().nullable(),
+  "year": zod.number(),
+  "income": zod.number(),
+  "expenses": zod.number(),
+  "notes": zod.string().nullish()
+}),
+  "retainedEarnings": zod.number().describe('Cumulative net profit from all years before this one, carried forward.'),
+  "cumulativeIncome": zod.number().describe('Lifetime income through the end of this year, including all opening balances.'),
+  "cumulativeExpenses": zod.number().describe('Lifetime expenses through the end of this year, including all opening balances.'),
+  "cumulativeProfit": zod.number().describe('Lifetime net profit through the end of this year (retainedEarnings + totalProfit).')
+})
+
+
+/**
+ * @summary List all fiscal years with litter, expense, or opening-balance data
+ */
+export const GetBudgetYearsResponseItem = zod.number()
+export const GetBudgetYearsResponse = zod.array(GetBudgetYearsResponseItem)
+
+
+/**
+ * @summary Get the opening balance / manual adjustment for a fiscal year
+ */
+export const GetOpeningBalanceQueryParams = zod.object({
+  "year": zod.coerce.number()
+})
+
+export const GetOpeningBalanceResponse = zod.object({
+  "id": zod.number().nullable(),
+  "year": zod.number(),
+  "income": zod.number(),
+  "expenses": zod.number(),
+  "notes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Create or update the opening balance / manual adjustment for a fiscal year
+ */
+export const setOpeningBalanceBodyIncomeMin = 0;
+
+export const setOpeningBalanceBodyExpensesMin = 0;
+
+
+
+export const SetOpeningBalanceBody = zod.object({
+  "year": zod.number(),
+  "income": zod.number().min(setOpeningBalanceBodyIncomeMin),
+  "expenses": zod.number().min(setOpeningBalanceBodyExpensesMin),
+  "notes": zod.string().nullish()
+})
+
+export const SetOpeningBalanceResponse = zod.object({
+  "id": zod.number().nullable(),
+  "year": zod.number(),
+  "income": zod.number(),
+  "expenses": zod.number(),
+  "notes": zod.string().nullish()
 })
 
 

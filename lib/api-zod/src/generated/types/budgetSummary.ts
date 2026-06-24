@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BudgetLitterSummary } from './budgetLitterSummary';
+import type { OpeningBalance } from './openingBalance';
 
 export interface BudgetSummary {
   year: number;
@@ -15,4 +16,13 @@ export interface BudgetSummary {
   totalIncome: number;
   totalPledged?: number;
   totalProfit: number;
+  openingBalance: OpeningBalance;
+  /** Cumulative net profit from all years before this one, carried forward. */
+  retainedEarnings: number;
+  /** Lifetime income through the end of this year, including all opening balances. */
+  cumulativeIncome: number;
+  /** Lifetime expenses through the end of this year, including all opening balances. */
+  cumulativeExpenses: number;
+  /** Lifetime net profit through the end of this year (retainedEarnings + totalProfit). */
+  cumulativeProfit: number;
 }

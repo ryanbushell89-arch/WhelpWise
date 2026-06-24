@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
-  useGetBudgetSummary, useListExpenses, useListLitters,
+  useGetBudgetSummary, useListExpenses, useListLitters, useGetBudgetYears,
+  useGetOpeningBalance, useSetOpeningBalance,
   useCreateExpense, useDeleteExpense,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   PiggyBank, Plus, Trash2, TrendingUp, TrendingDown, Wallet, ChevronDown, ChevronRight, Baby, FileDown,
+  Landmark, History, Settings2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -247,19 +250,107 @@ function LitterBudgetCard({
   );
 }
 
+function OpeningBalanceDialog({
+  year, open, onClose, onSaved,
+}: {
+  year: number;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { toast } = useToast();
+  const { data: openingBalance, isLoading } = useGetOpeningBalance({ year }, { query: { enabled: open, queryKey: ["opening-balance", year] } });
+  const setOpeningBalance = useSetOpeningBalance();
+  const [income, setIncome] = useState("");
+  const [expenses, setExpenses] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (openingBalance) {
+      setIncome(String((openingBalance as any).income ?? 0));
+      setExpenses(String((openingBalance as any).expenses ?? 0));
+      setNotes((openingBalance as any).notes ?? "");
+    }
+  }, [openingBalance]);
+
+  async function handleSave() {
+    try {
+      await setOpeningBalance.mutateAsync({
+        data: {
+          year,
+          income: parseFloat(income) || 0,
+          expenses: parseFloat(expenses) || 0,
+          notes: notes || null,
+        },
+      });
+      await onSaved();
+      toast({ title: `Opening balance for ${year} saved` });
+      onClose();
+    } catch {
+      toast({ title: "Error saving opening balance", variant: "destructive" });
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Opening Balance — {year}</DialogTitle>
+          <DialogDescription>
+            Starting position for {year}, e.g. carried over from a previous bookkeeping system. This is added on top of any litters and expenses tracked in WhelpWise for this year.
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <Skeleton className="h-32 w-full rounded-lg" />
+        ) : (
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Starting Income ($)</Label>
+                <Input type="number" step="0.01" min="0" value={income} onChange={e => setIncome(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Starting Expenses ($)</Label>
+                <Input type="number" step="0.01" min="0" value={expenses} onChange={e => setExpenses(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes (optional)</Label>
+              <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Migrated from spreadsheet" />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button disabled={setOpeningBalance.isPending || isLoading} onClick={handleSave}>
+            {setOpeningBalance.isPending ? "Saving…" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function BudgetPage() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const [expandedLitter, setExpandedLitter] = useState<number | null>(null);
   const [showGeneralForm, setShowGeneralForm] = useState(false);
+  const [showOpeningBalance, setShowOpeningBalance] = useState(false);
 
   const { data: summary, isLoading, refetch: refetchSummary } = useGetBudgetSummary({ year });
   const { data: litters } = useListLitters();
+  const { data: yearsData, refetch: refetchYears } = useGetBudgetYears();
   const generalExpensesQuery = useListExpenses({ year });
 
   async function refreshAll() {
     await refetchSummary();
     await generalExpensesQuery.refetch();
+  }
+
+  async function refreshAllAndYears() {
+    await refreshAll();
+    await refetchYears();
   }
 
   const litterOptions = useMemo(
@@ -271,14 +362,13 @@ export default function BudgetPage() {
   );
 
   const years = useMemo(() => {
-    const set = new Set<number>([currentYear]);
-    for (const l of summary?.litters ?? []) {
-      if (l.dob) set.add(new Date(l.dob).getFullYear());
-    }
+    const set = new Set<number>([currentYear, ...((yearsData as number[] | undefined) ?? [])]);
     return Array.from(set).sort((a, b) => b - a);
-  }, [summary, currentYear]);
+  }, [yearsData, currentYear]);
 
   const generalExpenses = ((generalExpensesQuery.data as any[] | undefined) ?? []).filter(e => e.litterId == null);
+  const openingBalance = (summary as any)?.openingBalance;
+  const hasOpeningBalance = openingBalance && (openingBalance.income !== 0 || openingBalance.expenses !== 0);
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
@@ -296,6 +386,9 @@ export default function BudgetPage() {
               {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setShowOpeningBalance(true)}>
+            <Settings2 className="h-4 w-4 mr-1.5" /> Opening Balance
+          </Button>
           <Button variant="outline" onClick={() => window.open(`/api/budget/report?year=${year}`, "_blank")}>
             <FileDown className="h-4 w-4 mr-1.5" /> Download PDF
           </Button>
@@ -307,29 +400,70 @@ export default function BudgetPage() {
           {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Total Income Received</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{money(summary?.totalIncome ?? 0)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">of {money(summary?.totalPledged ?? 0)} pledged in sales</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5"><TrendingDown className="h-4 w-4" /> Total Expenses</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{money(summary?.totalExpenses ?? 0)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">incl. {money(summary?.generalExpenses ?? 0)} general/kennel</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Wallet className="h-4 w-4" /> Net Profit</p>
-              <p className="text-2xl font-bold mt-1"><ProfitBadge amount={summary?.totalProfit ?? 0} /></p>
-            </CardContent>
-          </Card>
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> {year} Income Received</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{money(summary?.totalIncome ?? 0)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">of {money(summary?.totalPledged ?? 0)} pledged in sales</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5"><TrendingDown className="h-4 w-4" /> {year} Expenses</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{money(summary?.totalExpenses ?? 0)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">incl. {money(summary?.generalExpenses ?? 0)} general/kennel</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Wallet className="h-4 w-4" /> {year} Net Profit</p>
+                <p className="text-2xl font-bold mt-1"><ProfitBadge amount={summary?.totalProfit ?? 0} /></p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card className="bg-muted/30">
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5"><History className="h-4 w-4" /> Retained Earnings (carried into {year})</p>
+                <p className="text-xl font-bold mt-1"><ProfitBadge amount={(summary as any)?.retainedEarnings ?? 0} /></p>
+                <p className="text-xs text-muted-foreground mt-0.5">Net profit/loss from all years before {year}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-muted/30">
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Landmark className="h-4 w-4" /> Cumulative Lifetime Profit</p>
+                <p className="text-xl font-bold mt-1"><ProfitBadge amount={(summary as any)?.cumulativeProfit ?? 0} /></p>
+                <p className="text-xs text-muted-foreground mt-0.5">Total since the start of the business, through {year}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {hasOpeningBalance && (
+            <Card className="border-dashed">
+              <CardContent className="p-4 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="text-sm font-medium">Opening Balance / Manual Adjustment for {year}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Starting Income {money(openingBalance.income)} · Starting Expenses {money(openingBalance.expenses)}
+                    {openingBalance.notes ? ` · ${openingBalance.notes}` : ""}
+                  </p>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => setShowOpeningBalance(true)}>Edit</Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
+
+      <OpeningBalanceDialog
+        year={year}
+        open={showOpeningBalance}
+        onClose={() => setShowOpeningBalance(false)}
+        onSaved={refreshAllAndYears}
+      />
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Litters in {year}</h2>

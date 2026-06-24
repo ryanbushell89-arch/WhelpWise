@@ -45,6 +45,7 @@ import type {
   FamilyPetInput,
   FamilyPetUpdate,
   GetBudgetSummaryParams,
+  GetOpeningBalanceParams,
   HealthStatus,
   HealthTestInput,
   HealthTestResult,
@@ -61,6 +62,8 @@ import type {
   LitterInput,
   LitterUpdate,
   LookupDogsParams,
+  OpeningBalance,
+  OpeningBalanceInput,
   PedigreeInput,
   PedigreeTree,
   PetVaccination,
@@ -5191,6 +5194,238 @@ export function useGetBudgetSummary<TData = Awaited<ReturnType<typeof getBudgetS
 
 
 
+
+export const getGetBudgetYearsUrl = () => {
+
+
+
+
+  return `/api/budget/years`
+}
+
+/**
+ * @summary List all fiscal years with litter, expense, or opening-balance data
+ */
+export const getBudgetYears = async ( options?: RequestInit): Promise<number[]> => {
+
+  return customFetch<number[]>(getGetBudgetYearsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBudgetYearsQueryKey = () => {
+    return [
+    `/api/budget/years`
+    ] as const;
+    }
+
+
+export const getGetBudgetYearsQueryOptions = <TData = Awaited<ReturnType<typeof getBudgetYears>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBudgetYears>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBudgetYearsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBudgetYears>>> = ({ signal }) => getBudgetYears({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBudgetYears>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBudgetYearsQueryResult = NonNullable<Awaited<ReturnType<typeof getBudgetYears>>>
+export type GetBudgetYearsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all fiscal years with litter, expense, or opening-balance data
+ */
+
+export function useGetBudgetYears<TData = Awaited<ReturnType<typeof getBudgetYears>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBudgetYears>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBudgetYearsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetOpeningBalanceUrl = (params: GetOpeningBalanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/budget/opening-balance?${stringifiedParams}` : `/api/budget/opening-balance`
+}
+
+/**
+ * @summary Get the opening balance / manual adjustment for a fiscal year
+ */
+export const getOpeningBalance = async (params: GetOpeningBalanceParams, options?: RequestInit): Promise<OpeningBalance> => {
+
+  return customFetch<OpeningBalance>(getGetOpeningBalanceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpeningBalanceQueryKey = (params?: GetOpeningBalanceParams,) => {
+    return [
+    `/api/budget/opening-balance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetOpeningBalanceQueryOptions = <TData = Awaited<ReturnType<typeof getOpeningBalance>>, TError = ErrorType<unknown>>(params: GetOpeningBalanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpeningBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpeningBalanceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpeningBalance>>> = ({ signal }) => getOpeningBalance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpeningBalance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpeningBalanceQueryResult = NonNullable<Awaited<ReturnType<typeof getOpeningBalance>>>
+export type GetOpeningBalanceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the opening balance / manual adjustment for a fiscal year
+ */
+
+export function useGetOpeningBalance<TData = Awaited<ReturnType<typeof getOpeningBalance>>, TError = ErrorType<unknown>>(
+ params: GetOpeningBalanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpeningBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpeningBalanceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSetOpeningBalanceUrl = () => {
+
+
+
+
+  return `/api/budget/opening-balance`
+}
+
+/**
+ * @summary Create or update the opening balance / manual adjustment for a fiscal year
+ */
+export const setOpeningBalance = async (openingBalanceInput: OpeningBalanceInput, options?: RequestInit): Promise<OpeningBalance> => {
+
+  return customFetch<OpeningBalance>(getSetOpeningBalanceUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      openingBalanceInput,)
+  }
+);}
+
+
+
+
+export const getSetOpeningBalanceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOpeningBalance>>, TError,{data: BodyType<OpeningBalanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setOpeningBalance>>, TError,{data: BodyType<OpeningBalanceInput>}, TContext> => {
+
+const mutationKey = ['setOpeningBalance'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setOpeningBalance>>, {data: BodyType<OpeningBalanceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setOpeningBalance(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetOpeningBalanceMutationResult = NonNullable<Awaited<ReturnType<typeof setOpeningBalance>>>
+    export type SetOpeningBalanceMutationBody = BodyType<OpeningBalanceInput>
+    export type SetOpeningBalanceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create or update the opening balance / manual adjustment for a fiscal year
+ */
+export const useSetOpeningBalance = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setOpeningBalance>>, TError,{data: BodyType<OpeningBalanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setOpeningBalance>>,
+        TError,
+        {data: BodyType<OpeningBalanceInput>},
+        TContext
+      > => {
+      return useMutation(getSetOpeningBalanceMutationOptions(options));
+    }
 
 export const getListStudListingsUrl = (params?: ListStudListingsParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
-import { db, expensesTable, littersTable, puppiesTable, dogsTable } from "@workspace/db";
-import { eq, and, gte, lte, isNull } from "drizzle-orm";
-import { CreateExpenseBody, UpdateExpenseBody, ListExpensesQueryParams, GetBudgetSummaryQueryParams } from "@workspace/api-zod";
+import { db, expensesTable, littersTable, puppiesTable, dogsTable, openingBalancesTable } from "@workspace/db";
+import { eq, and, gte, lte, lt, isNull } from "drizzle-orm";
+import {
+  CreateExpenseBody, UpdateExpenseBody, ListExpensesQueryParams, GetBudgetSummaryQueryParams,
+  GetOpeningBalanceQueryParams, SetOpeningBalanceBody,
+} from "@workspace/api-zod";
 import { type AuthenticatedRequest } from "../middlewares/requireAuth";
 import type { Request } from "express";
 
@@ -13,6 +16,52 @@ function uid(req: Request): string {
 
 function parseId(raw: string | string[]): number {
   return parseInt(Array.isArray(raw) ? raw[0] : raw, 10);
+}
+
+function formatOpeningBalance(year: number, row?: typeof openingBalancesTable.$inferSelect) {
+  return {
+    id: row?.id ?? null,
+    year,
+    income: row?.income ?? 0,
+    expenses: row?.expenses ?? 0,
+    notes: row?.notes ?? null,
+  };
+}
+
+async function getOpeningBalanceRow(userId: string, year: number) {
+  const [row] = await db.select().from(openingBalancesTable)
+    .where(and(eq(openingBalancesTable.userId, userId), eq(openingBalancesTable.year, year)));
+  return row;
+}
+
+// Cumulative net profit from all activity strictly before `year` — litters,
+// general expenses, and opening balances alike — so it can be carried
+// forward as the current year's starting position.
+async function computeRetainedEarnings(userId: string, year: number) {
+  const cutoff = `${year}-01-01`;
+
+  const priorLitters = await db.select().from(littersTable)
+    .where(and(eq(littersTable.userId, userId), lt(littersTable.dob, cutoff)));
+  let income = 0;
+  for (const litter of priorLitters) {
+    const puppies = await db.select().from(puppiesTable).where(eq(puppiesTable.litterId, litter.id));
+    for (const puppy of puppies) {
+      if (!puppy.buyerId) continue;
+      if (puppy.depositPaid === "true") income += puppy.depositAmount ?? 0;
+      if (puppy.balancePaid === "true") income += puppy.balanceAmount ?? 0;
+    }
+  }
+
+  const priorExpenseRows = await db.select().from(expensesTable)
+    .where(and(eq(expensesTable.userId, userId), lt(expensesTable.date, cutoff)));
+  const expenses = priorExpenseRows.reduce((sum, e) => sum + e.amount, 0);
+
+  const priorOpeningBalances = await db.select().from(openingBalancesTable)
+    .where(and(eq(openingBalancesTable.userId, userId), lt(openingBalancesTable.year, year)));
+  const obIncome = priorOpeningBalances.reduce((sum, o) => sum + o.income, 0);
+  const obExpenses = priorOpeningBalances.reduce((sum, o) => sum + o.expenses, 0);
+
+  return { totalIncome: income + obIncome, totalExpenses: expenses + obExpenses };
 }
 
 function formatExpense(e: typeof expensesTable.$inferSelect) {
@@ -144,9 +193,18 @@ export async function computeBudgetSummary(userId: string, year: number) {
     ));
   const generalExpenses = generalExpensesRows.reduce((sum, e) => sum + e.amount, 0);
 
-  const totalExpenses = litterSummaries.reduce((sum, l) => sum + l.totalExpenses, 0) + generalExpenses;
-  const totalIncome = litterSummaries.reduce((sum, l) => sum + l.totalIncome, 0);
-  const totalPledged = litterSummaries.reduce((sum, l) => sum + l.totalPledged, 0);
+  const openingBalanceRow = await getOpeningBalanceRow(userId, year);
+  const openingBalance = formatOpeningBalance(year, openingBalanceRow);
+
+  const totalExpenses = litterSummaries.reduce((sum, l) => sum + l.totalExpenses, 0) + generalExpenses + openingBalance.expenses;
+  const totalIncome = litterSummaries.reduce((sum, l) => sum + l.totalIncome, 0) + openingBalance.income;
+  const totalPledged = litterSummaries.reduce((sum, l) => sum + l.totalPledged, 0) + openingBalance.income;
+  const totalProfit = totalIncome - totalExpenses;
+
+  const retained = await computeRetainedEarnings(userId, year);
+  const retainedEarnings = retained.totalIncome - retained.totalExpenses;
+  const cumulativeIncome = retained.totalIncome + totalIncome;
+  const cumulativeExpenses = retained.totalExpenses + totalExpenses;
 
   return {
     year,
@@ -155,7 +213,12 @@ export async function computeBudgetSummary(userId: string, year: number) {
     totalExpenses,
     totalIncome,
     totalPledged,
-    totalProfit: totalIncome - totalExpenses,
+    totalProfit,
+    openingBalance,
+    retainedEarnings,
+    cumulativeIncome,
+    cumulativeExpenses,
+    cumulativeProfit: cumulativeIncome - cumulativeExpenses,
   };
 }
 
@@ -166,6 +229,45 @@ router.get("/budget/summary", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const year = parsed.data.year ?? new Date().getFullYear();
   res.json(await computeBudgetSummary(userId, year));
+});
+
+// ─── Fiscal Years ───────────────────────────────────────────────────────────────
+router.get("/budget/years", async (req, res): Promise<void> => {
+  const userId = uid(req);
+  const years = new Set<number>([new Date().getFullYear()]);
+
+  const litters = await db.select({ dob: littersTable.dob }).from(littersTable).where(eq(littersTable.userId, userId));
+  for (const l of litters) if (l.dob) years.add(new Date(l.dob).getFullYear());
+
+  const expenseDates = await db.select({ date: expensesTable.date }).from(expensesTable).where(eq(expensesTable.userId, userId));
+  for (const e of expenseDates) years.add(new Date(e.date).getFullYear());
+
+  const balances = await db.select({ year: openingBalancesTable.year }).from(openingBalancesTable).where(eq(openingBalancesTable.userId, userId));
+  for (const o of balances) years.add(o.year);
+
+  res.json(Array.from(years).sort((a, b) => b - a));
+});
+
+// ─── Opening Balance / Manual Adjustment ───────────────────────────────────────
+router.get("/budget/opening-balance", async (req, res): Promise<void> => {
+  const userId = uid(req);
+  const parsed = GetOpeningBalanceQueryParams.safeParse(req.query);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const row = await getOpeningBalanceRow(userId, parsed.data.year);
+  res.json(formatOpeningBalance(parsed.data.year, row));
+});
+
+router.put("/budget/opening-balance", async (req, res): Promise<void> => {
+  const userId = uid(req);
+  const parsed = SetOpeningBalanceBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const { year, income, expenses, notes } = parsed.data;
+  const existing = await getOpeningBalanceRow(userId, year);
+  const [row] = existing
+    ? await db.update(openingBalancesTable).set({ income, expenses, notes: notes ?? null })
+        .where(eq(openingBalancesTable.id, existing.id)).returning()
+    : await db.insert(openingBalancesTable).values({ userId, year, income, expenses, notes: notes ?? null }).returning();
+  res.json(formatOpeningBalance(year, row));
 });
 
 export default router;

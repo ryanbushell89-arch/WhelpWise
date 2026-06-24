@@ -455,10 +455,21 @@ router.get("/budget/report", async (req, res): Promise<void> => {
   doc.moveDown(1.5);
 
   statBoxes(doc, [
-    { label: "Total Income", value: money(summary.totalIncome), color: GREEN },
-    { label: "Total Expenses", value: money(summary.totalExpenses), color: RED },
-    { label: "Net Profit", value: money(summary.totalProfit), color: summary.totalProfit >= 0 ? GREEN : RED },
+    { label: `${year} Income`, value: money(summary.totalIncome), color: GREEN },
+    { label: `${year} Expenses`, value: money(summary.totalExpenses), color: RED },
+    { label: `${year} Net Profit`, value: money(summary.totalProfit), color: summary.totalProfit >= 0 ? GREEN : RED },
   ]);
+  statBoxes(doc, [
+    { label: "Retained Earnings (carried forward)", value: money(summary.retainedEarnings), color: summary.retainedEarnings >= 0 ? GREEN : RED },
+    { label: "Cumulative Lifetime Income", value: money(summary.cumulativeIncome), color: GREEN },
+    { label: "Cumulative Lifetime Profit", value: money(summary.cumulativeProfit), color: summary.cumulativeProfit >= 0 ? GREEN : RED },
+  ]);
+
+  if (summary.openingBalance.income !== 0 || summary.openingBalance.expenses !== 0) {
+    heading2(doc, "Opening Balance / Manual Adjustment");
+    twoColField(doc, "Starting Income", money(summary.openingBalance.income), "Starting Expenses", money(summary.openingBalance.expenses));
+    if (summary.openingBalance.notes) field(doc, "Notes", summary.openingBalance.notes);
+  }
 
   heading2(doc, `Litters in ${year}`);
   if (summary.litters.length === 0) {
